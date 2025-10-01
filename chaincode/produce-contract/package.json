@@ -1,0 +1,17 @@
+{
+  "name": "produce-contract",
+  "version": "1.0.0",
+  "description": "Matiru produce contract",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.2.0",
+    "fabric-shim": "^2.2.0",
+    "uuid": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}
