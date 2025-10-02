@@ -1,4 +1,6 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Dimensions, StatusBar } from "react-native";
+
+const { width, height } = Dimensions.get("window");
 
 export const colors = {
   darkGreen: "#184B2C",
@@ -9,44 +11,135 @@ export const colors = {
 };
 
 export default StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.cream },
-  headerBar: {
-    height: 80,
-    backgroundColor: colors.darkGreen,
-    paddingTop: 30,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+  container: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    padding: 16,
+    paddingTop: StatusBar.currentHeight || 0, // safe top padding
   },
-  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "700" },
-  centerContent: { flex: 1, justifyContent: "center", alignItems: "center" },
-  button: {
-    padding: 12,
-    marginVertical: 8,
-    borderRadius: 10,
-    width: "80%",
+  bg: {
+    flex: 1,
+    width: width,
+    height: height,
+    resizeMode: "cover",
+  },
+  overlay: {
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  topContent: {
     alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  boxCard: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    marginVertical: 8,
+  bottomContent: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  welcome: {
+    color: "white",
+    fontSize: 30,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  subtitle: {
+    color: colors.accent,
+    fontSize: 20,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  bigButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.darkGreen,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    marginVertical: 10,
+    width: "85%",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 5,
+    elevation: 4, // Android shadow
+  },
+  bigButtonText: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+  brand: {
+    color: colors.accent,
+    fontSize: 40,
+    fontWeight: "bold",
+    textAlign: "center",
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
-    color: colors.midGreen,
-    marginBottom: 15,
+    color: colors.darkGreen,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  actionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.midGreen,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    margin: 8,
+    borderRadius: 12,
+    flexBasis: "40%",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  actionText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 6,
     textAlign: "center",
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.lightGreen,
+    borderColor: colors.darkGreen,
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: "#fff",
+    padding: 12,
+    marginVertical: 6,
+    backgroundColor: "white",
+    fontSize: 16,
+  },
+  button: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 12,
+    backgroundColor: colors.darkGreen,
+  },
+  primaryButton: {
+    backgroundColor: colors.darkGreen,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
   },
 });

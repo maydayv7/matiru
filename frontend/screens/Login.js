@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, Image } from "react-native";
 import styles, { colors } from "../styles";
 
 export default function LoginScreen({ navigation }) {
-  const roles = ["Farmer", "Distributor", "Retailer", "Inspector", "Consumer"];
+  const roles = ["Farmer", "Distributor", "Retailer", "Inspector", "Search"];
 
   return (
     <View style={styles.container}>
