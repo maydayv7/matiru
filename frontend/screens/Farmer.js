@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -14,9 +14,13 @@ import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
 import { API_BASE } from "../config";
 import styles from "../styles";
+import { AuthContext } from "../AuthContext";
 
 export default function FarmerScreen({ navigation, route }) {
-  const { userId } = route.params;
+  const { user } = useContext(AuthContext);
+  const userId = route.params?.userId || user?.id;
+  const token = user?.token;
+
   const [active, setActive] = useState(null);
 
   // Common
@@ -40,7 +44,10 @@ export default function FarmerScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/registerProduce`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           farmerId: userId,
           details: {
@@ -51,8 +58,11 @@ export default function FarmerScreen({ navigation, route }) {
             harvestDate,
             quality,
             expiryDate,
-            storageConditions: storageConditions.split(","),
+            storageConditions: storageConditions
+              ? storageConditions.split(",")
+              : [],
             location,
+            farmerName: user?.username || "",
           },
         }),
       });
@@ -68,13 +78,18 @@ export default function FarmerScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/updateDetails`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           actorId: userId,
           details: {
             pricePerUnit: parseFloat(pricePerUnit),
-            storageConditions: storageConditions.split(","),
+            storageConditions: storageConditions
+              ? storageConditions.split(",")
+              : [],
           },
         }),
       });
@@ -90,7 +105,10 @@ export default function FarmerScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/splitProduce`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           qty: parseFloat(splitQty),
@@ -99,7 +117,7 @@ export default function FarmerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Split", JSON.stringify(data.result, null, 2));
+      Alert.alert("Split", JSON.stringify(data.split, null, 2));
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -109,7 +127,10 @@ export default function FarmerScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/updateLocation`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           actorId: userId,

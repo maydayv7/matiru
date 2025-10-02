@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -14,9 +14,12 @@ import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
 import { API_BASE } from "../config";
 import styles from "../styles";
+import { AuthContext } from "../AuthContext";
 
 export default function DistributorScreen({ navigation, route }) {
-  const { userId } = route.params;
+  const { user } = useContext(AuthContext);
+  const userId = route.params?.userId || user?.id;
+  const token = user?.token;
   const [active, setActive] = useState(null);
 
   // Common
@@ -39,7 +42,10 @@ export default function DistributorScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/updateLocation`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           actorId: userId,
@@ -58,7 +64,10 @@ export default function DistributorScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/transferOwnership`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           newOwnerId,
@@ -78,13 +87,11 @@ export default function DistributorScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/markAsUnavailable`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          produceId,
-          actorId: userId,
-          reason,
-          newStatus,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ produceId, actorId: userId, reason, newStatus }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
@@ -96,13 +103,16 @@ export default function DistributorScreen({ navigation, route }) {
 
   const updateStorageConditions = async () => {
     try {
-      const res = await fetch(`${API_BASE}/updateStorageConditions`, {
+      const res = await fetch(`${API_BASE}/updateDetails`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           actorId: userId,
-          storageConditions: storageConditions.split(","),
+          details: { storageConditions: storageConditions.split(",") },
         }),
       });
       const data = await res.json();

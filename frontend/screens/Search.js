@@ -14,37 +14,23 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ScreenHeader from "../components/ScreenHeader";
-import Scanner from "../components/Scanner";
-import { API_BASE } from "../config";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import ScreenHeader from "../components/ScreenHeader";
+import { API_BASE } from "../config";
 import styles, { colors } from "../styles";
 
-const tabs = [
-  { key: "produce", label: "Produce", icon: "leaf" },
-  { key: "owner", label: "Owner", icon: "account" },
-  { key: "user", label: "User", icon: "account-badge" },
-];
-
 export default function SearchScreen({ navigation }) {
-  const [activeTab, setActiveTab] = useState("produce");
-  const [produceId, setProduceId] = useState("");
-  const [ownerId, setOwnerId] = useState("");
-  const [userKey, setUserKey] = useState("");
+  const [tab, setTab] = useState("Produce");
+  const [input, setInput] = useState("");
   const [result, setResult] = useState(null);
 
-  const fetchResult = async (type, id) => {
+  const fetchResult = async () => {
     try {
-      if (!id) {
-        Alert.alert("Error", "Please enter an ID");
-        return;
-      }
-      const url =
-        type === "produce"
-          ? `${API_BASE}/getProduce/${id}`
-          : type === "owner"
-            ? `${API_BASE}/getProduceByOwner/${id}`
-            : `${API_BASE}/getUser/${id}`;
+      let url = "";
+      if (tab === "Produce") url = `${API_BASE}/getProduce/${input}`;
+      if (tab === "Owner") url = `${API_BASE}/getProduceByOwner/${input}`;
+      if (tab === "User") url = `${API_BASE}/getUser/${input}`;
+
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Server ${res.status}`);
       const data = await res.json();
@@ -59,116 +45,70 @@ export default function SearchScreen({ navigation }) {
       <ScreenHeader
         title="Global Search"
         navigation={navigation}
-        role="Search"
-        showBack={true}
         hideSearchButton={true}
       />
 
-      <Text
-        style={{
-          marginVertical: 12,
-          color: colors.darkGreen,
-          textAlign: "center",
-        }}
-      >
-        To view information, select a tab and enter the ID
+      <Text style={{ marginBottom: 12, color: colors.darkGreen }}>
+        Search by Produce ID, Owner ID, or User Key
       </Text>
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-around",
-          marginBottom: 16,
-        }}
-      >
-        {tabs.map((t) => (
+      <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+        {["Produce", "Owner", "User"].map((t) => (
           <TouchableOpacity
-            key={t.key}
+            key={t}
             style={{
               flexDirection: "row",
               alignItems: "center",
               paddingVertical: 10,
               paddingHorizontal: 14,
               borderRadius: 12,
-              backgroundColor:
-                activeTab === t.key ? colors.darkGreen : colors.lightGreen,
+              backgroundColor: tab === t ? colors.darkGreen : colors.lightGreen,
             }}
             onPress={() => {
-              setActiveTab(t.key);
+              setTab(t);
               setResult(null);
+              setInput("");
             }}
           >
             <MaterialCommunityIcons
-              name={t.icon}
+              name={
+                t === "Produce"
+                  ? "leaf"
+                  : t === "Owner"
+                    ? "account"
+                    : "account-badge"
+              }
               size={20}
-              color={activeTab === t.key ? "white" : colors.darkGreen}
+              color={tab === t ? "white" : colors.darkGreen}
             />
             <Text
               style={{
-                color: activeTab === t.key ? "white" : colors.darkGreen,
+                color: tab === t ? "white" : colors.darkGreen,
                 marginLeft: 6,
                 fontWeight: "600",
               }}
             >
-              {t.label}
+              {t}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <ScrollView>
-        {activeTab === "produce" ? (
-          <Scanner value={produceId} onChange={setProduceId} />
-        ) : activeTab === "owner" ? (
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Owner ID"
-            value={ownerId}
-            onChangeText={setOwnerId}
-          />
-        ) : (
-          <TextInput
-            style={styles.input}
-            placeholder="Enter User Key"
-            value={userKey}
-            onChangeText={setUserKey}
-          />
-        )}
+      <TextInput
+        style={[styles.input, { marginTop: 20 }]}
+        placeholder={`Enter ${tab} ID`}
+        value={input}
+        onChangeText={setInput}
+      />
+      <TouchableOpacity style={styles.primaryButton} onPress={fetchResult}>
+        <Text style={styles.buttonText}>Search</Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() =>
-            fetchResult(
-              activeTab,
-              activeTab === "produce"
-                ? produceId
-                : activeTab === "owner"
-                  ? ownerId
-                  : userKey
-            )
-          }
-        >
-          <Text style={styles.buttonText}>
-            Search {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </Text>
-        </TouchableOpacity>
-
+      <ScrollView style={{ marginTop: 20 }}>
         {result && (
-          <View
-            style={{
-              marginTop: 20,
-              padding: 10,
-              backgroundColor: "white",
-              borderRadius: 10,
-            }}
-          >
-            <Text style={styles.subtitle}>Search Results:</Text>
-            <ScrollView horizontal>
-              <Text style={{ fontSize: 12 }}>
-                {JSON.stringify(result, null, 2)}
-              </Text>
-            </ScrollView>
-          </View>
+          <Text style={{ color: colors.darkGreen }}>
+            {JSON.stringify(result, null, 2)}
+          </Text>
         )}
       </ScrollView>
     </SafeAreaView>

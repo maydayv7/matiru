@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -14,29 +14,31 @@ import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
 import { API_BASE } from "../config";
 import styles from "../styles";
+import { AuthContext } from "../AuthContext";
 
 export default function RetailerScreen({ navigation, route }) {
-  const { userId } = route.params;
+  const { user } = useContext(AuthContext);
+  const userId = route.params?.userId || user?.id;
+  const token = user?.token;
   const [active, setActive] = useState(null);
 
-  // Common
   const [produceId, setProduceId] = useState("");
   const [location, setLocation] = useState("");
+  const [pricePerUnit, setPricePerUnit] = useState("");
+  const [storageConditions, setStorageConditions] = useState("");
 
-  // transferOwnership
   const [newOwnerId, setNewOwnerId] = useState("");
   const [qty, setQty] = useState("");
   const [salePrice, setSalePrice] = useState("");
-
-  // markAsUnavailable
-  const [reason, setReason] = useState("");
-  const [newStatus, setNewStatus] = useState("");
 
   const updateLocation = async () => {
     try {
       const res = await fetch(`${API_BASE}/updateLocation`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           actorId: userId,
@@ -55,7 +57,10 @@ export default function RetailerScreen({ navigation, route }) {
     try {
       const res = await fetch(`${API_BASE}/transferOwnership`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           newOwnerId,
@@ -65,27 +70,32 @@ export default function RetailerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Sale Recorded", JSON.stringify(data.result, null, 2));
+      Alert.alert("Transferred", JSON.stringify(data.result, null, 2));
     } catch (err) {
       Alert.alert("Error", err.message);
     }
   };
 
-  const markAsUnavailable = async () => {
+  const updateDetails = async () => {
     try {
-      const res = await fetch(`${API_BASE}/markAsUnavailable`, {
+      const res = await fetch(`${API_BASE}/updateDetails`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           produceId,
           actorId: userId,
-          reason,
-          newStatus,
+          details: {
+            pricePerUnit: parseFloat(pricePerUnit),
+            storageConditions: storageConditions.split(","),
+          },
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Marked Unavailable", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Updated Details", JSON.stringify(data.produce, null, 2));
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -106,14 +116,14 @@ export default function RetailerScreen({ navigation, route }) {
             onPress={() => setActive("location")}
           />
           <ActionButton
-            icon="cash-register"
-            text="Record Sale"
+            icon="cash"
+            text="Sell / Transfer"
             onPress={() => setActive("transfer")}
           />
           <ActionButton
-            icon="cancel"
-            text="Mark Unavailable"
-            onPress={() => setActive("remove")}
+            icon="update"
+            text="Update Details"
+            onPress={() => setActive("update")}
           />
         </View>
 
@@ -135,13 +145,13 @@ export default function RetailerScreen({ navigation, route }) {
             <Scanner value={produceId} onChange={setProduceId} />
             <TextInput
               style={styles.input}
-              placeholder="Customer/User ID"
+              placeholder="New Owner ID"
               value={newOwnerId}
               onChangeText={setNewOwnerId}
             />
             <TextInput
               style={styles.input}
-              placeholder="Quantity Sold"
+              placeholder="Quantity"
               keyboardType="numeric"
               value={qty}
               onChangeText={setQty}
@@ -157,31 +167,32 @@ export default function RetailerScreen({ navigation, route }) {
               style={styles.primaryButton}
               onPress={transferOwnership}
             >
-              <Text style={styles.buttonText}>Record Sale</Text>
+              <Text style={styles.buttonText}>Confirm Sale</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {active === "remove" && (
+        {active === "update" && (
           <View>
             <Scanner value={produceId} onChange={setProduceId} />
             <TextInput
               style={styles.input}
-              placeholder="Reason"
-              value={reason}
-              onChangeText={setReason}
+              placeholder="New Price Per Unit"
+              keyboardType="numeric"
+              value={pricePerUnit}
+              onChangeText={setPricePerUnit}
             />
             <TextInput
               style={styles.input}
-              placeholder="New Status (Expired, Spoiled...)"
-              value={newStatus}
-              onChangeText={setNewStatus}
+              placeholder="Storage Conditions (comma separated)"
+              value={storageConditions}
+              onChangeText={setStorageConditions}
             />
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={markAsUnavailable}
+              onPress={updateDetails}
             >
-              <Text style={styles.buttonText}>Mark as Unavailable</Text>
+              <Text style={styles.buttonText}>Update</Text>
             </TouchableOpacity>
           </View>
         )}

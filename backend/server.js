@@ -2,39 +2,98 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 const morgan = require("morgan");
 const fs = require("fs");
 const path = require("path");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const { Gateway, Wallets } = require("fabric-network");
 
 const app = express();
+app.use(cors());
 app.use(bodyParser.json());
 app.use(morgan("dev"));
 
-const ccpPath = path.resolve(process.env.CCP_PATH);
-const walletPath = path.resolve(process.env.WALLET_PATH);
+const CCP_PATH = process.env.CCP_PATH;
+const WALLET_PATH = process.env.WALLET_PATH;
 const CHANNEL = process.env.CHANNEL;
 const CHAINCODE = process.env.CHAINCODE;
 const IDENTITY = process.env.IDENTITY;
+const AS_LOCALHOST = process.env.AS_LOCALHOST === "true";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 async function getContract() {
-  const ccp = JSON.parse(fs.readFileSync(ccpPath, "utf8"));
-  const wallet = await Wallets.newFileSystemWallet(walletPath);
+  if (!CCP_PATH || !WALLET_PATH || !CHANNEL || !CHAINCODE || !IDENTITY) {
+    throw new Error(
+      "Missing Fabric environment variables (CCP_PATH/WALLET_PATH/CHANNEL/CHAINCODE/IDENTITY)"
+    );
+  }
+  const ccp = JSON.parse(fs.readFileSync(path.resolve(CCP_PATH), "utf8"));
+  const wallet = await Wallets.newFileSystemWallet(path.resolve(WALLET_PATH));
   const gateway = new Gateway();
   await gateway.connect(ccp, {
     wallet,
     identity: IDENTITY,
-    discovery: {
-      enabled: true,
-      asLocalhost: process.env.AS_LOCALHOST === "true",
-    },
+    discovery: { enabled: true, asLocalhost: AS_LOCALHOST },
   });
   const network = await gateway.getNetwork(CHANNEL);
   const contract = network.getContract(CHAINCODE);
   return { contract, gateway };
 }
 
-app.post("/api/registerProduce", async (req, res) => {
+/**
+ * Auth Route (prototype)
+ * Uses backend/users.json for demo authentication
+ */
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password)
+      return res.status(400).json({ error: "username and password required" });
+    const usersPath = path.join(__dirname, "users.json");
+    if (!fs.existsSync(usersPath))
+      return res
+        .status(500)
+        .json({ error: "users.json missing -> run 'npm run create-users'" });
+    const users = JSON.parse(fs.readFileSync(usersPath, "utf8"));
+    const user = users.find((u) => u.username === username);
+    if (!user) return res.status(401).json({ error: "invalid credentials" });
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: "invalid credentials" });
+    const token = jwt.sign(
+      { id: user.id, role: user.role, username: user.username },
+      JWT_SECRET,
+      { expiresIn: process.env.TOKEN_EXPIRES_IN || "1h" }
+    );
+    res.json({ token, id: user.id, role: user.role, username: user.username });
+  } catch (err) {
+    console.error("auth error", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Middleware
+function authenticateMiddleware(req, res, next) {
+  if (req.path === "/auth/login") return next();
+  const header = req.headers["authorization"];
+  if (!header)
+    return res.status(401).json({ error: "missing authorization header" });
+  const token = header.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "missing token" });
+  jwt.verify(token, JWT_SECRET, (err, payload) => {
+    if (err) return res.status(403).json({ error: "invalid token" });
+    req.user = payload; // { id, role, username }
+    next();
+  });
+}
+
+app.use("/api", authenticateMiddleware);
+
+// Functions
+const router = express.Router();
+
+router.post("/registerProduce", async (req, res) => {
   try {
     const { farmerId, details } = req.body;
     const { contract, gateway } = await getContract();
@@ -51,7 +110,7 @@ app.post("/api/registerProduce", async (req, res) => {
   }
 });
 
-app.post("/api/updateLocation", async (req, res) => {
+router.post("/updateLocation", async (req, res) => {
   try {
     const { produceId, actorId, newLocation } = req.body;
     const { contract, gateway } = await getContract();
@@ -69,7 +128,7 @@ app.post("/api/updateLocation", async (req, res) => {
   }
 });
 
-app.post("/api/inspectProduce", async (req, res) => {
+router.post("/inspectProduce", async (req, res) => {
   try {
     const { produceId, inspectorId, qualityUpdate } = req.body;
     const { contract, gateway } = await getContract();
@@ -87,7 +146,7 @@ app.post("/api/inspectProduce", async (req, res) => {
   }
 });
 
-app.post("/api/transferOwnership", async (req, res) => {
+router.post("/transferOwnership", async (req, res) => {
   try {
     const { produceId, newOwnerId, qty, salePrice } = req.body;
     const { contract, gateway } = await getContract();
@@ -106,7 +165,7 @@ app.post("/api/transferOwnership", async (req, res) => {
   }
 });
 
-app.post("/api/updateDetails", async (req, res) => {
+router.post("/updateDetails", async (req, res) => {
   try {
     const { produceId, actorId, details } = req.body;
     const { contract, gateway } = await getContract();
@@ -124,7 +183,7 @@ app.post("/api/updateDetails", async (req, res) => {
   }
 });
 
-app.post("/api/markAsUnavailable", async (req, res) => {
+router.post("/markAsUnavailable", async (req, res) => {
   try {
     const { produceId, actorId, reason, newStatus } = req.body;
     const { contract, gateway } = await getContract();
@@ -143,7 +202,7 @@ app.post("/api/markAsUnavailable", async (req, res) => {
   }
 });
 
-app.post("/api/splitProduce", async (req, res) => {
+router.post("/splitProduce", async (req, res) => {
   try {
     const { produceId, qty, ownerId } = req.body;
     const { contract, gateway } = await getContract();
@@ -161,7 +220,7 @@ app.post("/api/splitProduce", async (req, res) => {
   }
 });
 
-app.post("/api/recordPayment", async (req, res) => {
+router.post("/recordPayment", async (req, res) => {
   try {
     const {
       produceId,
@@ -187,7 +246,7 @@ app.post("/api/recordPayment", async (req, res) => {
   }
 });
 
-app.get("/api/getProduce/:id", async (req, res) => {
+router.get("/getProduce/:id", async (req, res) => {
   try {
     const { contract, gateway } = await getContract();
     const result = await contract.evaluateTransaction(
@@ -202,7 +261,7 @@ app.get("/api/getProduce/:id", async (req, res) => {
   }
 });
 
-app.get("/api/getOwner/:ownerId", async (req, res) => {
+router.get("/getProduceByOwner/:ownerId", async (req, res) => {
   try {
     const { contract, gateway } = await getContract();
     const result = await contract.evaluateTransaction(
@@ -217,7 +276,7 @@ app.get("/api/getOwner/:ownerId", async (req, res) => {
   }
 });
 
-app.post("/api/registerUser", async (req, res) => {
+router.post("/registerUser", async (req, res) => {
   try {
     const { role, details } = req.body;
     const { contract, gateway } = await getContract();
@@ -234,7 +293,7 @@ app.post("/api/registerUser", async (req, res) => {
   }
 });
 
-app.get("/api/getUser/:userKey", async (req, res) => {
+router.get("/getUser/:userKey", async (req, res) => {
   try {
     const { contract, gateway } = await getContract();
     const result = await contract.evaluateTransaction(
@@ -248,6 +307,8 @@ app.get("/api/getUser/:userKey", async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
+
+app.use("/api", router);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Backend server listening on ${PORT}`));
