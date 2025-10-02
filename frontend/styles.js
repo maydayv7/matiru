@@ -15,12 +15,12 @@ export default StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
     padding: 16,
-    paddingTop: StatusBar.currentHeight || 0, // safe top padding
+    paddingTop: StatusBar.currentHeight || 0,
   },
   bg: {
     flex: 1,
-    width: width,
-    height: height,
+    width,
+    height,
     resizeMode: "cover",
   },
   overlay: {
@@ -50,6 +50,19 @@ export default StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
+  brand: {
+    color: colors.accent,
+    fontSize: 40,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: colors.darkGreen,
+    marginBottom: 16,
+    textAlign: "center",
+  },
   bigButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -64,26 +77,13 @@ export default StyleSheet.create({
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 5,
-    elevation: 4, // Android shadow
+    elevation: 4,
   },
   bigButtonText: {
     color: "white",
     fontSize: 20,
     fontWeight: "600",
     marginLeft: 10,
-  },
-  brand: {
-    color: colors.accent,
-    fontSize: 40,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.darkGreen,
-    marginBottom: 16,
-    textAlign: "center",
   },
   actionGrid: {
     flexDirection: "row",
@@ -95,11 +95,11 @@ export default StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.midGreen,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     margin: 8,
     borderRadius: 12,
-    flexBasis: "40%",
+    flexBasis: "40%", // 2 per row
     justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -123,19 +123,17 @@ export default StyleSheet.create({
     backgroundColor: "white",
     fontSize: 16,
   },
-  button: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-    backgroundColor: colors.darkGreen,
-  },
   primaryButton: {
     backgroundColor: colors.darkGreen,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: "center",
     marginVertical: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
     color: "white",

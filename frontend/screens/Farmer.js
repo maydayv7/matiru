@@ -1,37 +1,39 @@
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
-  View,
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { API_BASE } from "../config";
-import styles, { colors } from "../styles";
-import QRScanner from "../components/QRScanner";
+import ScreenHeader from "../components/ScreenHeader";
+import ActionButton from "../components/ActionButton";
+import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
-import SearchNav from "../components/SearchNav";
+import { API_BASE } from "../config";
+import styles from "../styles";
 
-export default function FarmerScreen() {
+export default function FarmerScreen({ navigation, route }) {
+  const { userId } = route.params;
   const [active, setActive] = useState(null);
-  const farmerId = "farmer1";
 
+  // Common
+  const [produceId, setProduceId] = useState("");
+  const [location, setLocation] = useState("");
+
+  // registerProduce
   const [cropType, setCropType] = useState("");
   const [qty, setQty] = useState("");
   const [qtyUnit, setQtyUnit] = useState("KG");
+  const [pricePerUnit, setPricePerUnit] = useState("");
   const [harvestDate, setHarvestDate] = useState("");
   const [quality, setQuality] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [storageConditions, setStorageConditions] = useState("");
-  const [location, setLocation] = useState(null);
 
-  const [produceId, setProduceId] = useState("");
-  const [pricePerUnit, setPricePerUnit] = useState("");
-  const [storageUpdate, setStorageUpdate] = useState("");
-  const [splitId, setSplitId] = useState("");
+  // splitProduce
   const [splitQty, setSplitQty] = useState("");
 
   const registerProduce = async () => {
@@ -40,23 +42,25 @@ export default function FarmerScreen() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          farmerId,
+          farmerId: userId,
           details: {
             cropType,
-            qty,
+            qty: parseFloat(qty),
             qtyUnit,
+            pricePerUnit: parseFloat(pricePerUnit),
             harvestDate,
             quality,
             expiryDate,
-            storageConditions,
-            currentLocation: location || "Unknown",
+            storageConditions: storageConditions.split(","),
+            location,
           },
         }),
       });
       const data = await res.json();
-      Alert.alert("Success", JSON.stringify(data));
-    } catch (e) {
-      Alert.alert("Error", e.message);
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Registered", JSON.stringify(data.produce, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
     }
   };
 
@@ -67,14 +71,18 @@ export default function FarmerScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           produceId,
-          actorId: farmerId,
-          details: { pricePerUnit, storageConditions: storageUpdate },
+          actorId: userId,
+          details: {
+            pricePerUnit: parseFloat(pricePerUnit),
+            storageConditions: storageConditions.split(","),
+          },
         }),
       });
       const data = await res.json();
-      Alert.alert("Updated", JSON.stringify(data));
-    } catch (e) {
-      Alert.alert("Error", e.message);
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Updated", JSON.stringify(data.produce, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
     }
   };
 
@@ -84,50 +92,67 @@ export default function FarmerScreen() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          produceId: splitId,
-          qty: splitQty,
-          OwnerId: farmerId,
+          produceId,
+          qty: parseFloat(splitQty),
+          ownerId: userId,
         }),
       });
       const data = await res.json();
-      Alert.alert("Split Done", JSON.stringify(data));
-    } catch (e) {
-      Alert.alert("Error", e.message);
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Split", JSON.stringify(data.result, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
+  const updateLocation = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/updateLocation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          produceId,
+          actorId: userId,
+          newLocation: location,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Moved", JSON.stringify(data.produce, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenHeader
+        title="Farmer Dashboard"
+        navigation={navigation}
+        role="Farmer"
+      />
       <ScrollView>
-        <Text style={styles.title}>👨‍🌾 Farmer Dashboard</Text>
-        <SearchNav />
-
         <View style={styles.actionGrid}>
-          <TouchableOpacity
-            style={styles.actionButton}
+          <ActionButton
+            icon="plus"
+            text="Register Produce"
             onPress={() => setActive("register")}
-          >
-            <MaterialCommunityIcons name="plus-box" size={20} color="white" />
-            <Text style={styles.actionText}>Register</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
+          />
+          <ActionButton
+            icon="update"
+            text="Update Details"
             onPress={() => setActive("update")}
-          >
-            <MaterialCommunityIcons name="pencil" size={20} color="white" />
-            <Text style={styles.actionText}>Update</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
+          />
+          <ActionButton
+            icon="call-split"
+            text="Split Produce"
             onPress={() => setActive("split")}
-          >
-            <MaterialCommunityIcons
-              name="content-cut"
-              size={20}
-              color="white"
-            />
-            <Text style={styles.actionText}>Split</Text>
-          </TouchableOpacity>
+          />
+          <ActionButton
+            icon="map-marker"
+            text="Update Location"
+            onPress={() => setActive("location")}
+          />
         </View>
 
         {active === "register" && (
@@ -153,7 +178,14 @@ export default function FarmerScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Harvest Date"
+              placeholder="Price Per Unit"
+              keyboardType="numeric"
+              value={pricePerUnit}
+              onChangeText={setPricePerUnit}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Harvest Date (YYYY-MM-DD)"
               value={harvestDate}
               onChangeText={setHarvestDate}
             />
@@ -165,57 +197,57 @@ export default function FarmerScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Expiry Date"
+              placeholder="Expiry Date (YYYY-MM-DD)"
               value={expiryDate}
               onChangeText={setExpiryDate}
             />
             <TextInput
               style={styles.input}
-              placeholder="Storage Conditions"
+              placeholder="Storage Conditions (comma separated)"
               value={storageConditions}
               onChangeText={setStorageConditions}
             />
-            <LocationPicker onPicked={setLocation} />
+            <LocationPicker value={location} onChange={setLocation} />
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={registerProduce}
             >
-              <Text style={styles.buttonText}>Submit</Text>
+              <Text style={styles.buttonText}>Submit Registration</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {active === "update" && (
           <View>
-            <QRScanner onScanned={setProduceId} placeholder="Produce ID" />
+            <Scanner value={produceId} onChange={setProduceId} />
             <TextInput
               style={styles.input}
-              placeholder="Price/Unit"
+              placeholder="New Price Per Unit"
               keyboardType="numeric"
               value={pricePerUnit}
               onChangeText={setPricePerUnit}
             />
             <TextInput
               style={styles.input}
-              placeholder="Storage Conditions"
-              value={storageUpdate}
-              onChangeText={setStorageUpdate}
+              placeholder="Storage Conditions (comma separated)"
+              value={storageConditions}
+              onChangeText={setStorageConditions}
             />
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={updateDetails}
             >
-              <Text style={styles.buttonText}>Update</Text>
+              <Text style={styles.buttonText}>Update Details</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {active === "split" && (
           <View>
-            <QRScanner onScanned={setSplitId} placeholder="Produce ID" />
+            <Scanner value={produceId} onChange={setProduceId} />
             <TextInput
               style={styles.input}
-              placeholder="Qty to Split"
+              placeholder="Quantity to Split"
               keyboardType="numeric"
               value={splitQty}
               onChangeText={setSplitQty}
@@ -224,7 +256,20 @@ export default function FarmerScreen() {
               style={styles.primaryButton}
               onPress={splitProduce}
             >
-              <Text style={styles.buttonText}>Split</Text>
+              <Text style={styles.buttonText}>Split Produce</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {active === "location" && (
+          <View>
+            <Scanner value={produceId} onChange={setProduceId} />
+            <LocationPicker value={location} onChange={setLocation} />
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={updateLocation}
+            >
+              <Text style={styles.buttonText}>Update Location</Text>
             </TouchableOpacity>
           </View>
         )}

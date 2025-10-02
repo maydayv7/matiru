@@ -106,6 +106,61 @@ app.post("/api/transferOwnership", async (req, res) => {
   }
 });
 
+app.post("/api/updateDetails", async (req, res) => {
+  try {
+    const { produceId, actorId, details } = req.body;
+    const { contract, gateway } = await getContract();
+    const result = await contract.submitTransaction(
+      "updateDetails",
+      produceId,
+      actorId,
+      JSON.stringify(details)
+    );
+    await gateway.disconnect();
+    return res.json({ success: true, produce: JSON.parse(result.toString()) });
+  } catch (err) {
+    console.error("updateDetails error", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/markAsUnavailable", async (req, res) => {
+  try {
+    const { produceId, actorId, reason, newStatus } = req.body;
+    const { contract, gateway } = await getContract();
+    const result = await contract.submitTransaction(
+      "markAsUnavailable",
+      produceId,
+      actorId,
+      reason || "",
+      newStatus || "Removed"
+    );
+    await gateway.disconnect();
+    return res.json({ success: true, produce: JSON.parse(result.toString()) });
+  } catch (err) {
+    console.error("markAsUnavailable error", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/splitProduce", async (req, res) => {
+  try {
+    const { produceId, qty, ownerId } = req.body;
+    const { contract, gateway } = await getContract();
+    const result = await contract.submitTransaction(
+      "splitProduce",
+      produceId,
+      "" + qty,
+      ownerId
+    );
+    await gateway.disconnect();
+    return res.json({ success: true, split: JSON.parse(result.toString()) });
+  } catch (err) {
+    console.error("splitProduce error", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/recordPayment", async (req, res) => {
   try {
     const {

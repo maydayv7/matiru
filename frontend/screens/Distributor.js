@@ -1,27 +1,39 @@
-// screens/DistributorScreen.js
-import React, { useState } from "react";
+import { useState } from "react";
 import {
+  Alert,
   ScrollView,
-  View,
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { API_BASE } from "../config";
-import styles, { colors } from "../styles";
-import QRScanner from "../components/QRScanner";
+import ScreenHeader from "../components/ScreenHeader";
+import ActionButton from "../components/ActionButton";
+import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
-import SearchNav from "../components/SearchNav";
+import { API_BASE } from "../config";
+import styles from "../styles";
 
-export default function DistributorScreen() {
+export default function DistributorScreen({ navigation, route }) {
+  const { userId } = route.params;
   const [active, setActive] = useState(null);
-  const distributorId = "dist1";
+
+  // Common
   const [produceId, setProduceId] = useState("");
-  const [location, setLocation] = useState(null);
-  const [newOwner, setNewOwner] = useState("");
+  const [location, setLocation] = useState("");
+
+  // transferOwnership
+  const [newOwnerId, setNewOwnerId] = useState("");
+  const [qty, setQty] = useState("");
+  const [salePrice, setSalePrice] = useState("");
+
+  // markAsUnavailable
+  const [reason, setReason] = useState("");
+  const [newStatus, setNewStatus] = useState("");
+
+  // updateStorageConditions
+  const [storageConditions, setStorageConditions] = useState("");
 
   const updateLocation = async () => {
     try {
@@ -30,14 +42,15 @@ export default function DistributorScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           produceId,
-          actorId: distributorId,
+          actorId: userId,
           newLocation: location,
         }),
       });
       const data = await res.json();
-      Alert.alert("Updated", JSON.stringify(data));
-    } catch (e) {
-      Alert.alert("Error", e.message);
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Location Updated", JSON.stringify(data.produce, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
     }
   };
 
@@ -48,72 +61,175 @@ export default function DistributorScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           produceId,
-          newOwnerId: newOwner,
-          qty: 1,
-          salePrice: 100,
+          newOwnerId,
+          qty: parseFloat(qty),
+          salePrice: parseFloat(salePrice),
         }),
       });
       const data = await res.json();
-      Alert.alert("Transferred", JSON.stringify(data));
-    } catch (e) {
-      Alert.alert("Error", e.message);
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Transferred", JSON.stringify(data.result, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
+  const markAsUnavailable = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/markAsUnavailable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          produceId,
+          actorId: userId,
+          reason,
+          newStatus,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Marked Unavailable", JSON.stringify(data.produce, null, 2));
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
+  const updateStorageConditions = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/updateStorageConditions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          produceId,
+          actorId: userId,
+          storageConditions: storageConditions.split(","),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert(
+        "Updated Storage Conditions",
+        JSON.stringify(data.produce, null, 2)
+      );
+    } catch (err) {
+      Alert.alert("Error", err.message);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenHeader
+        title="Distributor Dashboard"
+        navigation={navigation}
+        role="Distributor"
+      />
       <ScrollView>
-        <Text style={styles.title}>🚚 Distributor Dashboard</Text>
-        <SearchNav />
-
         <View style={styles.actionGrid}>
-          <TouchableOpacity
-            style={styles.actionButton}
+          <ActionButton
+            icon="map-marker"
+            text="Update Location"
             onPress={() => setActive("location")}
-          >
-            <MaterialCommunityIcons name="map-marker" size={20} color="white" />
-            <Text style={styles.actionText}>Update Location</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
+          />
+          <ActionButton
+            icon="cash"
+            text="Transfer Ownership"
             onPress={() => setActive("transfer")}
-          >
-            <MaterialCommunityIcons
-              name="swap-horizontal"
-              size={20}
-              color="white"
-            />
-            <Text style={styles.actionText}>Transfer</Text>
-          </TouchableOpacity>
+          />
+          <ActionButton
+            icon="cancel"
+            text="Mark Unavailable"
+            onPress={() => setActive("remove")}
+          />
+          <ActionButton
+            icon="thermometer"
+            text="Update Storage Conditions"
+            onPress={() => setActive("storage")}
+          />
         </View>
 
         {active === "location" && (
           <View>
-            <QRScanner onScanned={setProduceId} placeholder="Produce ID" />
-            <LocationPicker onPicked={setLocation} />
+            <Scanner value={produceId} onChange={setProduceId} />
+            <LocationPicker value={location} onChange={setLocation} />
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={updateLocation}
             >
-              <Text style={styles.buttonText}>Update</Text>
+              <Text style={styles.buttonText}>Update Location</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {active === "transfer" && (
           <View>
-            <QRScanner onScanned={setProduceId} placeholder="Produce ID" />
+            <Scanner value={produceId} onChange={setProduceId} />
             <TextInput
               style={styles.input}
               placeholder="New Owner ID"
-              value={newOwner}
-              onChangeText={setNewOwner}
+              value={newOwnerId}
+              onChangeText={setNewOwnerId}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Quantity"
+              keyboardType="numeric"
+              value={qty}
+              onChangeText={setQty}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Sale Price"
+              keyboardType="numeric"
+              value={salePrice}
+              onChangeText={setSalePrice}
             />
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={transferOwnership}
             >
-              <Text style={styles.buttonText}>Transfer</Text>
+              <Text style={styles.buttonText}>Transfer Ownership</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {active === "remove" && (
+          <View>
+            <Scanner value={produceId} onChange={setProduceId} />
+            <TextInput
+              style={styles.input}
+              placeholder="Reason"
+              value={reason}
+              onChangeText={setReason}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="New Status (Removed/Missing...)"
+              value={newStatus}
+              onChangeText={setNewStatus}
+            />
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={markAsUnavailable}
+            >
+              <Text style={styles.buttonText}>Mark as Unavailable</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {active === "storage" && (
+          <View>
+            <Scanner value={produceId} onChange={setProduceId} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Storage Conditions (comma separated)"
+              value={storageConditions}
+              onChangeText={setStorageConditions}
+            />
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={updateStorageConditions}
+            >
+              <Text style={styles.buttonText}>Update Storage Conditions</Text>
             </TouchableOpacity>
           </View>
         )}

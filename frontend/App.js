@@ -1,9 +1,9 @@
 import {
   ImageBackground,
   ScrollView,
+  StatusBar,
   Text,
   TouchableOpacity,
-  StatusBar,
   View,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import styles, { colors } from "./styles";
 
+import LoginScreen from "./screens/Login";
 import FarmerScreen from "./screens/Farmer";
 import DistributorScreen from "./screens/Distributor";
 import RetailerScreen from "./screens/Retailer";
@@ -42,49 +43,31 @@ function HomeScreen({ navigation }) {
                 styles.bigButton,
                 { backgroundColor: "#444", marginBottom: 30 },
               ]}
-              onPress={() => navigation.navigate("Search")}
+              onPress={() =>
+                navigation.navigate("Search", { fromRole: "Consumer" })
+              }
             >
               <MaterialCommunityIcons name="magnify" size={24} color="white" />
               <Text style={styles.bigButtonText}>Global Search</Text>
             </TouchableOpacity>
 
-            <Text style={styles.subtitle}>Continue As</Text>
+            <Text style={styles.subtitle}> Continue As </Text>
 
-            <TouchableOpacity
-              style={styles.bigButton}
-              onPress={() => navigation.navigate("Farmer")}
-            >
-              <MaterialCommunityIcons name="tractor" size={24} color="white" />
-              <Text style={styles.bigButtonText}>Farmer</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.bigButton}
-              onPress={() => navigation.navigate("Distributor")}
-            >
-              <MaterialCommunityIcons name="truck" size={24} color="white" />
-              <Text style={styles.bigButtonText}>Distributor</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.bigButton}
-              onPress={() => navigation.navigate("Retailer")}
-            >
-              <MaterialCommunityIcons name="store" size={24} color="white" />
-              <Text style={styles.bigButtonText}>Retailer</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.bigButton}
-              onPress={() => navigation.navigate("Inspector")}
-            >
-              <MaterialCommunityIcons
-                name="shield-check"
-                size={24}
-                color="white"
-              />
-              <Text style={styles.bigButtonText}>Inspector</Text>
-            </TouchableOpacity>
+            {[
+              { role: "Farmer", icon: "tractor" },
+              { role: "Distributor", icon: "truck" },
+              { role: "Retailer", icon: "store" },
+              { role: "Inspector", icon: "shield-check" },
+            ].map((r) => (
+              <TouchableOpacity
+                key={r.role}
+                style={styles.bigButton}
+                onPress={() => navigation.navigate("Login", { role: r.role })}
+              >
+                <MaterialCommunityIcons name={r.icon} size={24} color="white" />
+                <Text style={styles.bigButtonText}>{r.role}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <View style={styles.bottomContent}>
@@ -101,6 +84,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Farmer" component={FarmerScreen} />
         <Stack.Screen name="Distributor" component={DistributorScreen} />
         <Stack.Screen name="Retailer" component={RetailerScreen} />

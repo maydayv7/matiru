@@ -3,52 +3,65 @@ import { View, TextInput, Button, Text, Alert } from "react-native";
 import * as Location from "expo-location";
 import { colors } from "../styles";
 
-export default function LocationPicker({ onPicked }) {
-  const [manual, setManual] = useState("");
-  const [place, setPlace] = useState("");
+export default function LocationPicker({ value, onChange }) {
+  const [coords, setCoords] = useState(null);
 
-  const pickGPS = async () => {
+  const pickLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        return Alert.alert("Permission denied", "Enable location services.");
+        Alert.alert("Permission denied", "Enable location services.");
+        return;
       }
-      const pos = await Location.getCurrentPositionAsync({});
-      const geo = await Location.reverseGeocodeAsync(pos.coords);
-      if (geo.length > 0) {
-        const name = `${geo[0].city || ""} ${geo[0].name || ""}`;
-        setPlace(name);
-        onPicked(name);
-      }
+
+      const loc = await Location.getCurrentPositionAsync({});
+      setCoords(
+        `Lat ${loc.coords.latitude.toFixed(4)}, Lng ${loc.coords.longitude.toFixed(4)}`
+      );
+
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      const placeName = address
+        ? `${address.name || ""} ${address.street || ""}, ${address.city || ""}, ${address.region || ""}, ${address.country || ""}`.trim()
+        : "";
+
+      onChange(
+        placeName ||
+          `${loc.coords.latitude.toFixed(4)}, ${loc.coords.longitude.toFixed(4)}`
+      );
     } catch (err) {
       Alert.alert("Error", err.message);
     }
   };
 
   return (
-    <View style={{ marginTop: 10 }}>
+    <View style={{ marginVertical: 8 }}>
       <Button
         title="Use Current Location"
         color={colors.darkGreen}
-        onPress={pickGPS}
+        onPress={pickLocation}
       />
       <TextInput
         style={{
           borderWidth: 1,
           borderColor: colors.darkGreen,
-          borderRadius: 8,
-          padding: 10,
-          marginTop: 10,
+          borderRadius: 10,
+          padding: 12,
+          marginTop: 8,
           backgroundColor: "white",
         }}
-        placeholder="Or enter place manually"
-        value={manual}
-        onChangeText={(t) => {
-          setManual(t);
-          onPicked(t);
-        }}
+        placeholder="Enter Location Name"
+        value={value}
+        onChangeText={onChange}
       />
-      {place ? <Text style={{ marginTop: 6 }}>📍 {place}</Text> : null}
+      {coords && (
+        <Text style={{ marginTop: 6, color: colors.darkGreen }}>
+          📍 {coords}
+        </Text>
+      )}
     </View>
   );
 }

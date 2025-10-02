@@ -1,37 +1,50 @@
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import { useState } from "react";
+import { Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import styles, { colors } from "../styles";
 
-export default function LoginScreen({ navigation }) {
-  const roles = ["Farmer", "Distributor", "Retailer", "Inspector", "Search"];
+export default function LoginScreen({ route, navigation }) {
+  const { role } = route.params;
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = () => {
+    if (!username || !password) {
+      Alert.alert("Error", "Enter username and password");
+      return;
+    }
+    navigation.replace(role, { userId: `${role.toLowerCase()}1` });
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>Matiru.</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Login as {role}</Text>
 
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        {/* <Image
-          source={require("../assets/logo.png")}
-          style={{
-            width: 180,
-            height: 280,
-            resizeMode: "cover",
-            borderRadius: 12,
-          }}
-        /> */}
-        <View style={{ marginTop: 20, width: "90%", alignItems: "center" }}>
-          {roles.map((r) => (
-            <TouchableOpacity
-              key={r}
-              style={[styles.button, { backgroundColor: colors.midGreen }]}
-              onPress={() => navigation.navigate(r)}
-            >
-              <Text style={styles.buttonText}>{r}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </View>
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        value={username}
+        onChangeText={setUsername}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+
+      <TouchableOpacity
+        style={[
+          styles.bigButton,
+          { backgroundColor: colors.darkGreen, width: "100%" },
+        ]}
+        onPress={handleLogin}
+      >
+        <MaterialCommunityIcons name="login" size={24} color="white" />
+        <Text style={styles.bigButtonText}>Login</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }

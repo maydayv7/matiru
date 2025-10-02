@@ -5,106 +5,172 @@
 */
 
 import { useState } from "react";
-import { View, Text, TouchableOpacity, Alert, ScrollView } from "react-native";
-import styles, { colors } from "../styles";
+import {
+  Alert,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ScreenHeader from "../components/ScreenHeader";
+import Scanner from "../components/Scanner";
 import { API_BASE } from "../config";
-import Scanner from "../components/QRScanner";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import styles, { colors } from "../styles";
 
-export default function SearchScreen() {
-  const [mode, setMode] = useState("produce"); // produce | owner | user
-  const [queryId, setQueryId] = useState("");
+const tabs = [
+  { key: "produce", label: "Produce", icon: "leaf" },
+  { key: "owner", label: "Owner", icon: "account" },
+  { key: "user", label: "User", icon: "account-badge" },
+];
+
+export default function SearchScreen({ navigation }) {
+  const [activeTab, setActiveTab] = useState("produce");
+  const [produceId, setProduceId] = useState("");
+  const [ownerId, setOwnerId] = useState("");
+  const [userKey, setUserKey] = useState("");
   const [result, setResult] = useState(null);
 
-  const searchProduce = async (id) => {
+  const fetchResult = async (type, id) => {
     try {
-      const res = await fetch(`${API_BASE}/getProduce/${id}`);
-      if (!res.ok) throw new Error("Not found");
+      if (!id) {
+        Alert.alert("Error", "Please enter an ID");
+        return;
+      }
+      const url =
+        type === "produce"
+          ? `${API_BASE}/getProduce/${id}`
+          : type === "owner"
+            ? `${API_BASE}/getProduceByOwner/${id}`
+            : `${API_BASE}/getUser/${id}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Server ${res.status}`);
       const data = await res.json();
-      setResult({ type: "produce", data: data.produce });
+      setResult(data);
     } catch (err) {
       Alert.alert("Error", err.message);
-      setResult(null);
     }
-  };
-
-  const searchOwner = async (id) => {
-    try {
-      const res = await fetch(`${API_BASE}/getOwner/${id}`);
-      const data = await res.json();
-      setResult({ type: "owner", data: data.produces });
-    } catch (err) {
-      Alert.alert("Error", err.message);
-      setResult(null);
-    }
-  };
-
-  const getUser = async (id) => {
-    try {
-      const res = await fetch(`${API_BASE}/getUser/${id}`);
-      const data = await res.json();
-      setResult({ type: "user", data: data.user });
-    } catch (err) {
-      Alert.alert("Error", err.message);
-      setResult(null);
-    }
-  };
-
-  const handleSearch = (id) => {
-    if (!id) return Alert.alert("Error", "ID required");
-    setQueryId(id);
-    if (mode === "produce") searchProduce(id);
-    if (mode === "owner") searchOwner(id);
-    if (mode === "user") getUser(id);
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Global Search</Text>
+    <SafeAreaView style={styles.container}>
+      <ScreenHeader
+        title="Global Search"
+        navigation={navigation}
+        role="Search"
+        showBack={true}
+        hideSearchButton={true}
+      />
+
+      <Text
+        style={{
+          marginVertical: 12,
+          color: colors.darkGreen,
+          textAlign: "center",
+        }}
+      >
+        To view information, select a tab and enter the ID
+      </Text>
 
       <View
         style={{
           flexDirection: "row",
           justifyContent: "space-around",
-          marginVertical: 10,
+          marginBottom: 16,
         }}
       >
-        {["produce", "owner", "user"].map((m) => (
+        {tabs.map((t) => (
           <TouchableOpacity
-            key={m}
-            style={[
-              styles.actionButton,
-              {
-                backgroundColor:
-                  mode === m ? colors.midGreen : colors.lightGreen,
-                width: "30%",
-              },
-            ]}
+            key={t.key}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              borderRadius: 12,
+              backgroundColor:
+                activeTab === t.key ? colors.darkGreen : colors.lightGreen,
+            }}
             onPress={() => {
-              setMode(m);
+              setActiveTab(t.key);
               setResult(null);
             }}
           >
-            <Text style={styles.actionText}>{m.toUpperCase()}</Text>
+            <MaterialCommunityIcons
+              name={t.icon}
+              size={20}
+              color={activeTab === t.key ? "white" : colors.darkGreen}
+            />
+            <Text
+              style={{
+                color: activeTab === t.key ? "white" : colors.darkGreen,
+                marginLeft: 6,
+                fontWeight: "600",
+              }}
+            >
+              {t.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Scanner onScanned={handleSearch} placeholder={`Enter ${mode} ID`} />
-
-      <View style={{ marginTop: 20 }}>
-        <Text style={{ fontWeight: "700", color: colors.darkGreen }}>
-          Result
-        </Text>
-        {result ? (
-          <View style={styles.card}>
-            <Text style={{ color: colors.darkGreen }}>
-              {JSON.stringify(result.data, null, 2)}
-            </Text>
-          </View>
+      <ScrollView>
+        {activeTab === "produce" ? (
+          <Scanner value={produceId} onChange={setProduceId} />
+        ) : activeTab === "owner" ? (
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Owner ID"
+            value={ownerId}
+            onChangeText={setOwnerId}
+          />
         ) : (
-          <Text style={{ color: "#666", marginTop: 8 }}>No results</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter User Key"
+            value={userKey}
+            onChangeText={setUserKey}
+          />
         )}
-      </View>
-    </ScrollView>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() =>
+            fetchResult(
+              activeTab,
+              activeTab === "produce"
+                ? produceId
+                : activeTab === "owner"
+                  ? ownerId
+                  : userKey
+            )
+          }
+        >
+          <Text style={styles.buttonText}>
+            Search {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </Text>
+        </TouchableOpacity>
+
+        {result && (
+          <View
+            style={{
+              marginTop: 20,
+              padding: 10,
+              backgroundColor: "white",
+              borderRadius: 10,
+            }}
+          >
+            <Text style={styles.subtitle}>Search Results:</Text>
+            <ScrollView horizontal>
+              <Text style={{ fontSize: 12 }}>
+                {JSON.stringify(result, null, 2)}
+              </Text>
+            </ScrollView>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
