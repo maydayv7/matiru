@@ -1,15 +1,19 @@
-# Problem Statement
+# Matiru
 
-SIH25045: Blockchain-Based Supply Chain Transparency for Agricultural Produce
+To run the app:
 
-### Description
+1. Get the blockchain network up and running with the `chaincode`
+2. Start the `backend`
+3. Start the `frontend`: Install [Expo Go](https://expo.dev/go) on your phone and scan the QR Code
 
-Create a blockchain-based system to track agricultural produce from farm to consumer, ensuring transparency in pricing, quality, and origin. The solution should allow stakeholders (farmers, distributors, retailers) to verify transactions and reduce exploitation in the supply chain.
+For 2 and 3, `cd` into the respective directory, then run:
 
-### Expected Outcome
+```
+npm install
+npm start
+```
 
-A decentralized platform with a user-friendly interface for farmers and consumers to trace produce, reducing fraud and ensuring fair pricing, deployable on low-cost hardware or cloud infrastructure.
+---
 
-### Technical Feasibility
-
-Leverages existing blockchain frameworks like Ethereum or Hyperledger, with smart contracts for automated tracking and QR code integration for consumer access.
+For a detailed overview about this project, read [this](./docs/SOLUTION.md).  
+The model is described [here](./docs/MODEL.md).
