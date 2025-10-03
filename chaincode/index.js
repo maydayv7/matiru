@@ -1,7 +1,6 @@
 "use strict";
 
 const { Contract } = require("fabric-contract-api");
-const { v4: uuidv4 } = require("uuid");
 
 class ProduceContract extends Contract {
   // Helper: throw if missing
@@ -17,10 +16,23 @@ class ProduceContract extends Contract {
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(obj)));
   }
 
-  // Utility: create action item
-  _actionItem(action, location, owner, meta) {
+  // Helper: deterministic timestamp from tx context
+  _txTimestampISO(ctx) {
+    const ts = ctx.stub.getTxTimestamp();
+    // ts.seconds may be a Long object in some environments
+    const seconds =
+      typeof ts.seconds === "object" &&
+      typeof ts.seconds.toNumber === "function"
+        ? ts.seconds.toNumber()
+        : Number(ts.seconds);
+    const millis = seconds * 1000 + Math.floor((ts.nanos || 0) / 1e6);
+    return new Date(millis).toISOString();
+  }
+
+  // Utility: create deterministic action item (uses tx timestamp)
+  _actionItem(ctx, action, location, owner, meta) {
     return {
-      timestamp: new Date().toISOString(),
+      timestamp: this._txTimestampISO(ctx),
       action,
       currentLocation: location || "",
       currentOwner: owner || "",
@@ -35,10 +47,11 @@ class ProduceContract extends Contract {
 
   // 1. registerProduce(farmerId, details)
   async registerProduce(ctx, farmerId, detailsStr) {
-    const details = JSON.parse(detailsStr);
-    const id = `PRODUCE-${uuidv4()}`;
-    const now = new Date().toISOString();
+    const details = JSON.parse(detailsStr || "{}");
+    const txId = ctx.stub.getTxID();
+    const now = this._txTimestampISO(ctx);
 
+    const id = `PRODUCE-${txId}`;
     const produce = {
       id,
       parentId: null,
@@ -62,12 +75,11 @@ class ProduceContract extends Contract {
     };
 
     produce.actionHistory.push(
-      this._actionItem("REGISTER", produce.currentLocation, farmerId, {
+      this._actionItem(ctx, "REGISTER", produce.currentLocation, farmerId, {
         note: details.note || "",
       })
     );
 
-    // Save produce
     await this._putState(ctx, id, produce);
 
     // Update farmer profile (simple)
@@ -89,8 +101,6 @@ class ProduceContract extends Contract {
   // 2. updateLocation(produceId, actorId, inTransitOrNewLocation)
   async updateLocation(ctx, produceId, actorId, newLocationOrInTransit) {
     const produce = await this._getState(ctx, produceId);
-    const now = new Date().toISOString();
-
     if (newLocationOrInTransit === "In Transit") {
       produce.status = "In Transit";
     } else {
@@ -99,7 +109,7 @@ class ProduceContract extends Contract {
     }
 
     produce.actionHistory.push(
-      this._actionItem("MOVE", produce.currentLocation, actorId, {})
+      this._actionItem(ctx, "MOVE", produce.currentLocation, actorId, {})
     );
     await this._putState(ctx, produceId, produce);
     return produce;
@@ -112,7 +122,9 @@ class ProduceContract extends Contract {
     produce.notAvailableReason = reason || "";
     produce.status = newStatus || "Removed";
     produce.actionHistory.push(
-      this._actionItem("REMOVED", produce.currentLocation, actorId, { reason })
+      this._actionItem(ctx, "REMOVED", produce.currentLocation, actorId, {
+        reason,
+      })
     );
     await this._putState(ctx, produceId, produce);
     return produce;
@@ -120,7 +132,7 @@ class ProduceContract extends Contract {
 
   // 4. inspectProduce(produceId, inspectorId, qualityUpdate)
   async inspectProduce(ctx, produceId, inspectorId, qualityUpdateStr) {
-    const qualityUpdate = JSON.parse(qualityUpdateStr);
+    const qualityUpdate = JSON.parse(qualityUpdateStr || "{}");
     const produce = await this._getState(ctx, produceId);
 
     if (qualityUpdate.quality !== undefined)
@@ -132,6 +144,7 @@ class ProduceContract extends Contract {
 
     produce.actionHistory.push(
       this._actionItem(
+        ctx,
         "INSPECT",
         produce.currentLocation,
         inspectorId,
@@ -144,7 +157,7 @@ class ProduceContract extends Contract {
       produce.notAvailableReason = qualityUpdate.reason || "Failed Inspection";
       produce.status = "Failed Inspection";
       produce.actionHistory.push(
-        this._actionItem("REMOVED", produce.currentLocation, inspectorId, {
+        this._actionItem(ctx, "REMOVED", produce.currentLocation, inspectorId, {
           reason: produce.notAvailableReason,
         })
       );
@@ -156,7 +169,7 @@ class ProduceContract extends Contract {
 
   // 5. updateDetails(produceId, actorId, details) -> Only 'currentOwner'
   async updateDetails(ctx, produceId, actorId, detailsStr) {
-    const details = JSON.parse(detailsStr);
+    const details = JSON.parse(detailsStr || "{}");
     const produce = await this._getState(ctx, produceId);
 
     if (produce.currentOwner !== actorId) {
@@ -170,7 +183,13 @@ class ProduceContract extends Contract {
     produce.totalPrice = (produce.pricePerUnit || 0) * (produce.qty || 0);
 
     produce.actionHistory.push(
-      this._actionItem("UPDATED", produce.currentLocation, actorId, details)
+      this._actionItem(
+        ctx,
+        "UPDATED",
+        produce.currentLocation,
+        actorId,
+        details
+      )
     );
     await this._putState(ctx, produceId, produce);
     return produce;
@@ -192,7 +211,7 @@ class ProduceContract extends Contract {
     produce.qty = produce.qty - qty;
     produce.totalPrice = (produce.pricePerUnit || 0) * produce.qty;
 
-    const childId = `PRODUCE-${uuidv4()}`;
+    const childId = `${produce.id}-${ctx.stub.getTxID()}-CHILD`;
     const child = JSON.parse(JSON.stringify(produce));
     child.id = childId;
     child.parentId = produce.id;
@@ -201,13 +220,13 @@ class ProduceContract extends Contract {
     child.totalPrice = (child.pricePerUnit || 0) * qty;
     child.actionHistory = child.actionHistory || [];
     child.actionHistory.push(
-      this._actionItem("SPLIT", produce.currentLocation, ownerId, { qty })
+      this._actionItem(ctx, "SPLIT", produce.currentLocation, ownerId, { qty })
     );
 
     produce.children = produce.children || [];
     produce.children.push(childId);
     produce.actionHistory.push(
-      this._actionItem("SPLIT", produce.currentLocation, ownerId, {
+      this._actionItem(ctx, "SPLIT", produce.currentLocation, ownerId, {
         createdChild: childId,
         qty,
       })
@@ -224,7 +243,7 @@ class ProduceContract extends Contract {
     const qty = parseFloat(qtyStr);
     const salePrice = parseFloat(salePriceStr);
     const produce = await this._getState(ctx, produceId);
-    const now = new Date().toISOString();
+    const now = this._txTimestampISO(ctx);
     const currentOwner = produce.currentOwner;
 
     if (!produce.isAvailable) {
@@ -247,7 +266,7 @@ class ProduceContract extends Contract {
       const child = splitRes.child;
       child.currentOwner = newOwnerId;
       child.actionHistory.push(
-        this._actionItem("SALE", child.currentLocation, newOwnerId, {
+        this._actionItem(ctx, "SALE", child.currentLocation, newOwnerId, {
           qty,
           salePrice,
         })
@@ -267,7 +286,7 @@ class ProduceContract extends Contract {
       // full transfer
       produce.currentOwner = newOwnerId;
       produce.actionHistory.push(
-        this._actionItem("SALE", produce.currentLocation, newOwnerId, {
+        this._actionItem(ctx, "SALE", produce.currentLocation, newOwnerId, {
           qty,
           salePrice,
         })
@@ -298,7 +317,7 @@ class ProduceContract extends Contract {
     paymentRef
   ) {
     const produce = await this._getState(ctx, produceId);
-    const now = new Date().toISOString();
+    const now = this._txTimestampISO(ctx);
 
     produce.saleHistory = produce.saleHistory || [];
     if (produce.saleHistory.length === 0) {
@@ -323,16 +342,18 @@ class ProduceContract extends Contract {
 
     produce.actionHistory.push(
       this._actionItem(
+        ctx,
         "PAYMENT",
         produce.currentLocation,
         produce.currentOwner,
-        { transactionId, paymentStatus, paymentMethod, paymentRef }
+        {
+          transactionId,
+          paymentStatus,
+          paymentMethod,
+          paymentRef,
+        }
       )
     );
-
-    // Optional: store sensitive payment details in private data collection (PDCPrices)
-    // Example:
-    // await ctx.stub.putPrivateData('PDCPrices', `PAY-${produceId}`, Buffer.from(JSON.stringify({ transactionId, paymentMethod, paymentRef, salePrice: produce.saleHistory.slice(-1)[0].salePrice })));
 
     await this._putState(ctx, produceId, produce);
     return produce;
@@ -366,7 +387,7 @@ class ProduceContract extends Contract {
   // Governance functions
   async registerUser(ctx, role, detailsStr) {
     const details = JSON.parse(detailsStr || "{}");
-    const id = details.id || `USER-${uuidv4()}`;
+    const id = details.id || `USER-${ctx.stub.getTxID()}`;
     const key = `${role.toUpperCase()}-${id}`;
     const user = {
       role,
@@ -401,4 +422,4 @@ class ProduceContract extends Contract {
   }
 }
 
-module.exports = ProduceContract;
+module.exports.contracts = [ProduceContract];
