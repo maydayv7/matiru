@@ -76,6 +76,16 @@ app.post("/api/auth/login", async (req, res) => {
 // Middleware
 function authenticateMiddleware(req, res, next) {
   if (req.path === "/auth/login") return next();
+
+  // Public Queries
+  if (
+    req.method === "GET" &&
+    (req.path.startsWith("/getProduce") ||
+      req.path.startsWith("/getProduceByOwner"))
+  ) {
+    return next();
+  }
+
   const header = req.headers["authorization"];
   if (!header)
     return res.status(401).json({ error: "missing authorization header" });
@@ -83,7 +93,7 @@ function authenticateMiddleware(req, res, next) {
   if (!token) return res.status(401).json({ error: "missing token" });
   jwt.verify(token, JWT_SECRET, (err, payload) => {
     if (err) return res.status(403).json({ error: "invalid token" });
-    req.user = payload; // { id, role, username }
+    req.user = payload;
     next();
   });
 }
@@ -246,6 +256,24 @@ router.post("/recordPayment", async (req, res) => {
   }
 });
 
+router.post("/registerUser", async (req, res) => {
+  try {
+    const { role, details } = req.body;
+    const { contract, gateway } = await getContract();
+    const result = await contract.submitTransaction(
+      "registerUser",
+      role,
+      JSON.stringify(details)
+    );
+    await gateway.disconnect();
+    return res.json({ success: true, user: JSON.parse(result.toString()) });
+  } catch (err) {
+    console.error("registerUser error", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Queries
 router.get("/getProduce/:id", async (req, res) => {
   try {
     const { contract, gateway } = await getContract();
@@ -272,23 +300,6 @@ router.get("/getProduceByOwner/:ownerId", async (req, res) => {
     return res.json({ success: true, produces: JSON.parse(result.toString()) });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-router.post("/registerUser", async (req, res) => {
-  try {
-    const { role, details } = req.body;
-    const { contract, gateway } = await getContract();
-    const result = await contract.submitTransaction(
-      "registerUser",
-      role,
-      JSON.stringify(details)
-    );
-    await gateway.disconnect();
-    return res.json({ success: true, user: JSON.parse(result.toString()) });
-  } catch (err) {
-    console.error("registerUser error", err);
     return res.status(500).json({ error: err.message });
   }
 });

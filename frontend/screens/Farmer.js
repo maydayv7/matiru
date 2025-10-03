@@ -12,6 +12,7 @@ import ScreenHeader from "../components/ScreenHeader";
 import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
+import QRModal from "../components/QRModal";
 import { API_BASE } from "../config";
 import styles from "../styles";
 import { AuthContext } from "../AuthContext";
@@ -40,6 +41,26 @@ export default function FarmerScreen({ navigation, route }) {
   // splitProduce
   const [splitQty, setSplitQty] = useState("");
 
+  // QR Modal
+  const [qrVisible, setQrVisible] = useState(false);
+  const [lastProduceId, setLastProduceId] = useState(null);
+
+  const resetRegisterForm = () => {
+    setCropType("");
+    setQty("");
+    setQtyUnit("KG");
+    setPricePerUnit("");
+    setHarvestDate("");
+    setQuality("");
+    setExpiryDate("");
+    setStorageConditions("");
+    setLocation("");
+  };
+
+  const resetCommon = () => {
+    setProduceId("");
+  };
+
   const registerProduce = async () => {
     try {
       const res = await fetch(`${API_BASE}/registerProduce`, {
@@ -52,9 +73,9 @@ export default function FarmerScreen({ navigation, route }) {
           farmerId: userId,
           details: {
             cropType,
-            qty: parseFloat(qty),
+            qty: parseFloat(qty) || 0,
             qtyUnit,
-            pricePerUnit: parseFloat(pricePerUnit),
+            pricePerUnit: parseFloat(pricePerUnit) || 0,
             harvestDate,
             quality,
             expiryDate,
@@ -68,7 +89,14 @@ export default function FarmerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Registered", JSON.stringify(data.produce, null, 2));
+
+      const produced = data.produce;
+      setLastProduceId(produced.id);
+      setQrVisible(true);
+
+      Alert.alert("Registered", "Produce registered successfully");
+      resetRegisterForm();
+      resetCommon();
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -95,7 +123,12 @@ export default function FarmerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Updated", JSON.stringify(data.produce, null, 2));
+
+      Alert.alert("Updated", "Produce details updated");
+      // Reset inputs for update flow only
+      resetCommon();
+      setPricePerUnit("");
+      setStorageConditions("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -117,7 +150,10 @@ export default function FarmerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Split", JSON.stringify(data.split, null, 2));
+
+      Alert.alert("Split", "Produce split successfully");
+      setSplitQty("");
+      resetCommon();
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -139,7 +175,9 @@ export default function FarmerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Moved", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Moved", "Location updated successfully");
+      resetCommon();
+      setLocation("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -295,6 +333,12 @@ export default function FarmerScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      <QRModal
+        visible={qrVisible}
+        onClose={() => setQrVisible(false)}
+        value={lastProduceId || ""}
+      />
     </SafeAreaView>
   );
 }

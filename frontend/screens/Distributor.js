@@ -38,6 +38,10 @@ export default function DistributorScreen({ navigation, route }) {
   // updateStorageConditions
   const [storageConditions, setStorageConditions] = useState("");
 
+  const resetCommon = () => {
+    setProduceId("");
+  };
+
   const updateLocation = async () => {
     try {
       const res = await fetch(`${API_BASE}/updateLocation`, {
@@ -54,7 +58,9 @@ export default function DistributorScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Location Updated", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Location Updated", "Location updated successfully");
+      resetCommon();
+      setLocation("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -77,7 +83,12 @@ export default function DistributorScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Transferred", JSON.stringify(data.result, null, 2));
+      Alert.alert("Transferred", "Ownership transferred successfully");
+      // reset fields
+      resetCommon();
+      setNewOwnerId("");
+      setQty("");
+      setSalePrice("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -95,7 +106,10 @@ export default function DistributorScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Marked Unavailable", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Marked Unavailable", "Produce marked unavailable");
+      resetCommon();
+      setReason("");
+      setNewStatus("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -117,10 +131,9 @@ export default function DistributorScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert(
-        "Updated Storage Conditions",
-        JSON.stringify(data.produce, null, 2)
-      );
+      Alert.alert("Updated Storage Conditions", "Storage conditions updated");
+      resetCommon();
+      setStorageConditions("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }

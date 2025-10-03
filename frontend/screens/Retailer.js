@@ -31,6 +31,10 @@ export default function RetailerScreen({ navigation, route }) {
   const [qty, setQty] = useState("");
   const [salePrice, setSalePrice] = useState("");
 
+  const resetCommon = () => {
+    setProduceId("");
+  };
+
   const updateLocation = async () => {
     try {
       const res = await fetch(`${API_BASE}/updateLocation`, {
@@ -47,7 +51,9 @@ export default function RetailerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Location Updated", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Location Updated", "Location updated successfully");
+      resetCommon();
+      setLocation("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -70,7 +76,11 @@ export default function RetailerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Transferred", JSON.stringify(data.result, null, 2));
+      Alert.alert("Transferred", "Sale / Transfer successful");
+      resetCommon();
+      setNewOwnerId("");
+      setQty("");
+      setSalePrice("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -95,7 +105,10 @@ export default function RetailerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Updated Details", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Updated Details", "Produce details updated");
+      resetCommon();
+      setPricePerUnit("");
+      setStorageConditions("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }

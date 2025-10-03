@@ -25,6 +25,10 @@ export default function InspectorScreen({ navigation, route }) {
   const [quality, setQuality] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
 
+  const resetCommon = () => {
+    setProduceId("");
+  };
+
   const inspectProduce = async () => {
     try {
       const res = await fetch(`${API_BASE}/inspectProduce`, {
@@ -41,7 +45,10 @@ export default function InspectorScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Inspected", JSON.stringify(data.produce, null, 2));
+      Alert.alert("Inspected", "Inspection recorded successfully");
+      resetCommon();
+      setQuality("");
+      setExpiryDate("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
