@@ -126,7 +126,11 @@ export default function DistributorScreen({ navigation, route }) {
         body: JSON.stringify({
           produceId,
           actorId: userId,
-          details: { storageConditions: storageConditions.split(",") },
+          details: {
+            storageConditions: storageConditions
+              ? storageConditions.split(",").map((c) => c.trim())
+              : [],
+          },
         }),
       });
       const data = await res.json();

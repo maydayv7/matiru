@@ -99,7 +99,9 @@ export default function RetailerScreen({ navigation, route }) {
           actorId: userId,
           details: {
             pricePerUnit: parseFloat(pricePerUnit),
-            storageConditions: storageConditions.split(","),
+            storageConditions: storageConditions
+              ? storageConditions.split(",").map((c) => c.trim())
+              : [],
           },
         }),
       });

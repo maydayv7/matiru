@@ -183,13 +183,21 @@ export default function SearchScreen({ navigation }) {
         />
       </View>
       <View style={local.badgesRow}>
-        <View style={local.certContainer}>
-          <MaterialCommunityIcons
-            name="shield-check"
-            size={20}
-            color={colors.darkGreen}
-          />
-          <Text style={local.certText}>Organic Certified</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+          {produce.certification?.length > 0 ? (
+            produce.certification.map((cert, idx) => (
+              <View key={idx} style={local.certContainer}>
+                <MaterialCommunityIcons
+                  name="shield-check"
+                  size={20}
+                  color={colors.darkGreen}
+                />
+                <Text style={local.certText}>{cert}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={{ color: "#666" }}>No certifications</Text>
+          )}
         </View>
         <View style={local.statusContainer}>
           <Text style={local.statusText}>{produce.status}</Text>
@@ -251,7 +259,7 @@ export default function SearchScreen({ navigation }) {
             textAlign: "center",
           }}
         >
-          Search by Produce ID or User Key
+          Search for information about any produce or user in the supply chain
         </Text>
         <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
           {["Produce", "User"].map((t) => (

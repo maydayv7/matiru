@@ -27,7 +27,7 @@ export default function LoginScreen({ route, navigation }) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Server ${res.status}`);
       }
-      const data = await res.json(); // { token, id, role, username }
+      const data = await res.json();
       if (role && data.role !== role) {
         return Alert.alert(
           "Error",

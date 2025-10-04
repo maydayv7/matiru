@@ -29,16 +29,17 @@ export default function FarmerScreen({ navigation, route }) {
   // Common
   const [produceId, setProduceId] = useState("");
   const [location, setLocation] = useState("");
+  const [pricePerUnit, setPricePerUnit] = useState("");
+  const [storageConditions, setStorageConditions] = useState("");
+  const [certification, setCertification] = useState("");
 
   // registerProduce
   const [cropType, setCropType] = useState("");
   const [qty, setQty] = useState("");
   const [qtyUnit, setQtyUnit] = useState("KG");
-  const [pricePerUnit, setPricePerUnit] = useState("");
   const [harvestDate, setHarvestDate] = useState("");
   const [quality, setQuality] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
-  const [storageConditions, setStorageConditions] = useState("");
 
   // splitProduce
   const [splitQty, setSplitQty] = useState("");
@@ -57,6 +58,7 @@ export default function FarmerScreen({ navigation, route }) {
     setQuality("");
     setExpiryDate("");
     setStorageConditions("");
+    setCertification("");
     setLocation("");
     imageUploaderRef.current?.reset();
   };
@@ -88,7 +90,10 @@ export default function FarmerScreen({ navigation, route }) {
             quality,
             expiryDate,
             storageConditions: storageConditions
-              ? storageConditions.split(",")
+              ? storageConditions.split(",").map((c) => c.trim())
+              : [],
+            certification: certification
+              ? certification.split(",").map((c) => c.trim())
               : [],
             location,
             farmerName: user?.username || "",
@@ -129,7 +134,10 @@ export default function FarmerScreen({ navigation, route }) {
           details: {
             pricePerUnit: parseFloat(pricePerUnit),
             storageConditions: storageConditions
-              ? storageConditions.split(",")
+              ? storageConditions.split(",").map((c) => c.trim())
+              : [],
+            certification: certification
+              ? certification.split(",").map((c) => c.trim())
               : [],
           },
         }),
@@ -289,6 +297,12 @@ export default function FarmerScreen({ navigation, route }) {
               value={storageConditions}
               onChangeText={setStorageConditions}
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Certifications (comma separated)"
+              value={certification}
+              onChangeText={setCertification}
+            />
             <LocationPicker value={location} onChange={setLocation} />
             <ImageUploader ref={imageUploaderRef} token={token} />
             <TouchableOpacity
@@ -315,6 +329,12 @@ export default function FarmerScreen({ navigation, route }) {
               placeholder="Storage Conditions (comma separated)"
               value={storageConditions}
               onChangeText={setStorageConditions}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Certifications (comma separated)"
+              value={certification}
+              onChangeText={setCertification}
             />
             <TouchableOpacity
               style={styles.primaryButton}

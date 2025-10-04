@@ -46,13 +46,14 @@ class ProduceContract extends Contract {
   }
 
   // Functions
-  // 1. registerProduce(farmerId, details)
+  // Produce Registration
   async registerProduce(ctx, farmerId, detailsStr) {
     const farmerKey = `FARMER-${farmerId}`;
     const farmerState = await ctx.stub.getState(farmerKey);
     if (!farmerState || farmerState.length === 0) {
       throw new Error(`Farmer ${farmerId} is not registered`);
     }
+    const farmer = JSON.parse(farmerState.toString());
 
     const details = JSON.parse(detailsStr || "{}");
     const txId = ctx.stub.getTxID();
@@ -77,6 +78,7 @@ class ProduceContract extends Contract {
       expiryDate: details.expiryDate || null,
       storageConditions: details.storageConditions || [],
       imageUrl: details.imageUrl || null,
+      certification: farmer.certification || [],
       status: "Harvested",
       isAvailable: true,
       notAvailableReason: null,
@@ -87,10 +89,8 @@ class ProduceContract extends Contract {
         note: details.note || "",
       })
     );
-
     await this._putState(ctx, id, produce);
 
-    const farmer = JSON.parse(farmerState.toString());
     farmer.registeredProduce = farmer.registeredProduce || [];
     farmer.registeredProduce.push(id);
     await this._putState(ctx, farmerKey, farmer);
@@ -98,12 +98,11 @@ class ProduceContract extends Contract {
     return produce;
   }
 
-  // 2. updateLocation(produceId, actorId, inTransitOrNewLocation)
+  // Update location
   async updateLocation(ctx, produceId, actorId, newLocationOrInTransit) {
     const produce = await this._getState(ctx, produceId);
-    if (newLocationOrInTransit === "In Transit") {
-      produce.status = "In Transit";
-    } else {
+    if (newLocationOrInTransit === "In Transit") produce.status = "In Transit";
+    else {
       produce.currentLocation = newLocationOrInTransit;
       if (produce.status === "Harvested") produce.status = "In Transit";
     }
@@ -115,7 +114,7 @@ class ProduceContract extends Contract {
     return produce;
   }
 
-  // 3. markAsUnavailable(produceId, actorId, reason, newStatus)
+  // Mark as unavailable due to some reason
   async markAsUnavailable(ctx, produceId, actorId, reason, newStatus) {
     const produce = await this._getState(ctx, produceId);
     produce.isAvailable = false;
@@ -130,7 +129,7 @@ class ProduceContract extends Contract {
     return produce;
   }
 
-  // 4. inspectProduce(produceId, inspectorId, qualityUpdate)
+  // Produce Inspection
   async inspectProduce(ctx, produceId, inspectorId, qualityUpdateStr) {
     const qualityUpdate = JSON.parse(qualityUpdateStr || "{}");
     const produce = await this._getState(ctx, produceId);
@@ -167,7 +166,7 @@ class ProduceContract extends Contract {
     return produce;
   }
 
-  // 5. updateDetails(produceId, actorId, details) -> Only 'currentOwner'
+  // Update added details
   async updateDetails(ctx, produceId, actorId, detailsStr) {
     const details = JSON.parse(detailsStr || "{}");
     const produce = await this._getState(ctx, produceId);
@@ -181,6 +180,9 @@ class ProduceContract extends Contract {
     if (details.storageConditions !== undefined)
       produce.storageConditions = details.storageConditions;
     if (details.imageUrl !== undefined) produce.imageUrl = details.imageUrl;
+    if (details.certification !== undefined)
+      produce.certification = details.certification;
+
     produce.totalPrice = (produce.pricePerUnit || 0) * (produce.qty || 0);
 
     produce.actionHistory.push(
@@ -196,20 +198,17 @@ class ProduceContract extends Contract {
     return produce;
   }
 
-  // 6. splitProduce(produceId, qty, OwnerId)
+  // Split into smaller batches
   async splitProduce(ctx, produceId, qtyStr, ownerId) {
     const qty = parseFloat(qtyStr);
     const produce = await this._getState(ctx, produceId);
 
-    if (produce.currentOwner !== ownerId) {
+    if (produce.currentOwner !== ownerId)
       throw new Error("Only current owner can split produce");
-    }
-
-    if (qty <= 0 || qty > produce.qty) {
+    if (qty <= 0 || qty > produce.qty)
       throw new Error("Invalid quantity to split");
-    }
 
-    produce.qty = produce.qty - qty;
+    produce.qty -= qty;
     produce.totalPrice = (produce.pricePerUnit || 0) * produce.qty;
 
     const childId = `${produce.id}-${ctx.stub.getTxID()}-CHILD`;
@@ -219,7 +218,7 @@ class ProduceContract extends Contract {
     child.children = [];
     child.qty = qty;
     child.totalPrice = (child.pricePerUnit || 0) * qty;
-    child.actionHistory = child.actionHistory || [];
+    child.actionHistory = [];
     child.actionHistory.push(
       this._actionItem(ctx, "SPLIT", produce.currentLocation, ownerId, { qty })
     );
@@ -239,7 +238,7 @@ class ProduceContract extends Contract {
     return { parent: produce, child };
   }
 
-  // 7. transferOwnership(produceId, newOwnerId, qty, salePrice)
+  // Transfer ownership
   async transferOwnership(ctx, produceId, newOwnerId, qtyStr, salePriceStr) {
     const qty = parseFloat(qtyStr);
     const salePrice = parseFloat(salePriceStr);
@@ -247,17 +246,11 @@ class ProduceContract extends Contract {
     const now = this._txTimestampISO(ctx);
     const currentOwner = produce.currentOwner;
 
-    if (!produce.isAvailable) {
-      throw new Error("Asset not available for sale");
-    }
-
-    if (qty <= 0 || qty > produce.qty) {
-      throw new Error("Invalid qty");
-    }
+    if (!produce.isAvailable) throw new Error("Asset not available");
+    if (qty <= 0 || qty > produce.qty) throw new Error("Invalid qty");
 
     let resultAssetId = produceId;
     if (qty < produce.qty) {
-      // Partial Transfer
       const splitRes = await this.splitProduce(
         ctx,
         produceId,
@@ -284,7 +277,6 @@ class ProduceContract extends Contract {
       await this._putState(ctx, child.id, child);
       resultAssetId = child.id;
     } else {
-      // Full Transfer
       produce.currentOwner = newOwnerId;
       produce.actionHistory.push(
         this._actionItem(ctx, "SALE", produce.currentLocation, newOwnerId, {
@@ -308,7 +300,7 @@ class ProduceContract extends Contract {
     return { newAssetId: resultAssetId };
   }
 
-  // 8. recordPayment(produceId, transactionId, paymentStatus, paymentMethod, paymentRef)
+  // Record payment for transfer
   async recordPayment(
     ctx,
     produceId,
@@ -371,8 +363,7 @@ class ProduceContract extends Contract {
     while (true) {
       const res = await iterator.next();
       if (res.value && res.value.key) {
-        const key = res.value.key;
-        if (key.startsWith("PRODUCE-")) {
+        if (res.value.key.startsWith("PRODUCE-")) {
           const obj = JSON.parse(res.value.value.toString("utf8"));
           if (obj.currentOwner === ownerId) results.push(obj);
         }
@@ -385,7 +376,7 @@ class ProduceContract extends Contract {
     return results;
   }
 
-  // Governance Functions
+  // Governance
   async registerUser(ctx, role, detailsStr) {
     const details = JSON.parse(detailsStr || "{}");
     const id = details.id || `USER-${ctx.stub.getTxID()}`;
