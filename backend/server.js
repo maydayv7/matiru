@@ -39,11 +39,9 @@ const AS_LOCALHOST = process.env.AS_LOCALHOST === "true";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 async function getContract() {
-  if (!CCP_PATH || !WALLET_PATH || !CHANNEL || !CHAINCODE || !IDENTITY) {
-    throw new Error(
-      "Missing Fabric environment variables (CCP_PATH/WALLET_PATH/CHANNEL/CHAINCODE/IDENTITY)"
-    );
-  }
+  if (!CCP_PATH || !WALLET_PATH || !CHANNEL || !CHAINCODE || !IDENTITY)
+    throw new Error("Missing Fabric environment variables");
+
   const ccp = JSON.parse(fs.readFileSync(path.resolve(CCP_PATH), "utf8"));
   const wallet = await Wallets.newFileSystemWallet(path.resolve(WALLET_PATH));
   const gateway = new Gateway();
@@ -92,7 +90,7 @@ app.post("/api/auth/login", bodyParser.json(), async (req, res) => {
     if (!fs.existsSync(usersPath))
       return res
         .status(500)
-        .json({ error: "users.json missing -> run 'npm run create-users'" });
+        .json({ error: "users.json missing -> run 'npm run init'" });
     const users = JSON.parse(fs.readFileSync(usersPath, "utf8"));
     const user = users.find((u) => u.username === username);
     if (!user) return res.status(401).json({ error: "invalid credentials" });
@@ -115,9 +113,8 @@ app.post(
   authenticateMiddleware,
   upload.single("image"),
   (req, res) => {
-    if (!req.file) {
+    if (!req.file)
       return res.status(400).json({ error: "no image file uploaded" });
-    }
     try {
       const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${
         req.file.filename

@@ -67,7 +67,7 @@ export default function Scanner({ value, onChange }) {
         ) : null
       ) : (
         <TextInput
-          style={styles.input}
+          style={[styles.input, { marginTop: 10 }]}
           placeholder="Enter Produce ID"
           value={value}
           onChangeText={onChange}

@@ -23,8 +23,7 @@ npm install
 ```
 git clone https://github.com/hyperledger/fabric-samples.git
 curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
-# Install Fabric binaries and Docker images
-./install-fabric.sh
+./install-fabric.sh # Install Fabric binaries and Docker images
 ```
 
 Ensure the `config` directory is present inside `fabric-samples`
@@ -33,8 +32,7 @@ Ensure the `config` directory is present inside `fabric-samples`
 
 ```
 cd fabric-samples/test-network
-# 'test-network' with CA enabled and channel "mychannel"
-./network.sh up createChannel -ca
+./network.sh up createChannel -ca -c CHANNEL_NAME
 ```
 
 After initial setup, you can use the following commands:
@@ -47,18 +45,17 @@ After initial setup, you can use the following commands:
 4. Deploy Chaincode:
 
 ```
-# Chaincode name "produce"
-./network.sh deployCC -ccn produce -ccp /path/to/CHAINCODE -ccl javascript
+./network.sh deployCC -c CHANNEL_NAME -ccn CHAINCODE_NAME -ccp /path/to/chaincode -ccl javascript
 ```
 
 5. Sample Wallet Creation:
 
 ```
 # From fabric-samples/test-network
-cp organizations/peerOrganizations/org1.example.com/connection-org1.json /path/to/MATIRU/backend/connection-org1.json
-cd /path/to/MATIRU/backend
+cp organizations/peerOrganizations/org1.example.com/connection-org1.json /path/to/matiru/backend/connection-org1.json
+cd /path/to/matiru/backend
 mkdir -p wallet
-node addToWallet.js org1 /path/to/fabric-samples/TEST-NETWORK/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp ./wallet USER_NAME
+node initWallet.js org1 /path/to/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp ./wallet USER_NAME
 ```
 
 6. The `.env` file must be created in `backend` like so:
@@ -74,8 +71,8 @@ TOKEN_EXPIRES_IN=24h
 # Fabric Connection
 CCP_PATH=connection-org1.json
 WALLET_PATH=./wallet
-CHANNEL=mychannel
-CHAINCODE=produce
+CHANNEL=CHANNEL_NAME
+CHAINCODE=CHAINCODE_NAME
 IDENTITY=USER_NAME
 AS_LOCALHOST=true
 ```
@@ -86,7 +83,7 @@ Make sure the port is not blocked by a firewall
 
 ```
 npm install
-npm run create-users
+npm run init
 npm start
 ```
 

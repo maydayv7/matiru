@@ -3,7 +3,7 @@
 const { Contract } = require("fabric-contract-api");
 
 class ProduceContract extends Contract {
-  // Helper: throw if missing
+  // Utilities
   async _getState(ctx, id) {
     const data = await ctx.stub.getState(id);
     if (!data || data.length === 0) {
@@ -16,7 +16,7 @@ class ProduceContract extends Contract {
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(obj)));
   }
 
-  // Helper: deterministic timestamp from tx context
+  // Deterministic timestamp from tx context
   _txTimestampISO(ctx) {
     const ts = ctx.stub.getTxTimestamp();
     // ts.seconds may be a Long object in some environments
@@ -29,7 +29,7 @@ class ProduceContract extends Contract {
     return new Date(millis).toISOString();
   }
 
-  // Utility: create deterministic action item (uses tx timestamp)
+  // Deterministic action item
   _actionItem(ctx, action, location, owner, meta) {
     return {
       timestamp: this._txTimestampISO(ctx),
@@ -40,13 +40,20 @@ class ProduceContract extends Contract {
     };
   }
 
-  // Initialize ledger (optional)
+  // Initialize ledger
   async initLedger(ctx) {
     console.info("Ledger initialized");
   }
 
+  // Functions
   // 1. registerProduce(farmerId, details)
   async registerProduce(ctx, farmerId, detailsStr) {
+    const farmerKey = `FARMER-${farmerId}`;
+    const farmerState = await ctx.stub.getState(farmerKey);
+    if (!farmerState || farmerState.length === 0) {
+      throw new Error(`Farmer ${farmerId} is not registered`);
+    }
+
     const details = JSON.parse(detailsStr || "{}");
     const txId = ctx.stub.getTxID();
     const now = this._txTimestampISO(ctx);
@@ -83,18 +90,10 @@ class ProduceContract extends Contract {
 
     await this._putState(ctx, id, produce);
 
-    // Update farmer profile (simple)
-    const farmerKey = `FARMER-${farmerId}`;
-    let farmer = {};
-    const farmerState = await ctx.stub.getState(farmerKey);
-    if (farmerState && farmerState.length)
-      farmer = JSON.parse(farmerState.toString());
-    farmer.role = "Farmer";
-    farmer.id = farmerId;
-    farmer.name = farmer.name || details.farmerName || "";
+    const farmer = JSON.parse(farmerState.toString());
     farmer.registeredProduce = farmer.registeredProduce || [];
     farmer.registeredProduce.push(id);
-    await ctx.stub.putState(farmerKey, Buffer.from(JSON.stringify(farmer)));
+    await this._putState(ctx, farmerKey, farmer);
 
     return produce;
   }
@@ -258,7 +257,7 @@ class ProduceContract extends Contract {
 
     let resultAssetId = produceId;
     if (qty < produce.qty) {
-      // partial -> split then assign child to new owner
+      // Partial Transfer
       const splitRes = await this.splitProduce(
         ctx,
         produceId,
@@ -285,7 +284,7 @@ class ProduceContract extends Contract {
       await this._putState(ctx, child.id, child);
       resultAssetId = child.id;
     } else {
-      // full transfer
+      // Full Transfer
       produce.currentOwner = newOwnerId;
       produce.actionHistory.push(
         this._actionItem(ctx, "SALE", produce.currentLocation, newOwnerId, {
@@ -386,21 +385,27 @@ class ProduceContract extends Contract {
     return results;
   }
 
-  // Governance functions
+  // Governance Functions
   async registerUser(ctx, role, detailsStr) {
     const details = JSON.parse(detailsStr || "{}");
     const id = details.id || `USER-${ctx.stub.getTxID()}`;
     const key = `${role.toUpperCase()}-${id}`;
+
     const user = {
       role,
       id,
       name: details.name || "",
       location: details.location || "",
       walletId: details.walletId || "",
-      registeredProduce: details.registeredProduce || [],
-      ownedProduce: details.ownedProduce || [],
-      inventory: details.inventory || [],
+      registeredProduce: [],
+      ownedProduce: [],
+      inventory: [],
     };
+
+    if (role.toUpperCase() === "FARMER") {
+      user.certification = details.certification || [];
+    }
+
     await this._putState(ctx, key, user);
     return user;
   }
@@ -412,7 +417,7 @@ class ProduceContract extends Contract {
     return JSON.parse(data.toString());
   }
 
-  async updateUser(ctx, userKey, role, detailsStr) {
+  async updateUser(ctx, userKey, detailsStr) {
     const data = await ctx.stub.getState(userKey);
     if (!data || data.length === 0)
       throw new Error(`User ${userKey} not found`);
