@@ -8,6 +8,7 @@ export const colors = {
   cream: "#F3F7EE",
   lightGreen: "#DCEFCF",
   accent: "#BEE7A9",
+  danger: "#C04A4A",
 };
 
 export default StyleSheet.create({

@@ -8,12 +8,27 @@ const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const multer = require("multer");
 const { Gateway, Wallets } = require("fabric-network");
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
 app.use(morgan("dev"));
+
+// Image Storage
+app.use("/uploads", express.static("uploads"));
+const UPLOAD_DIR = path.join(__dirname, "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: function (req, file, cb) {
+    const uniqueName = Date.now() + "-" + file.originalname;
+    cb(null, uniqueName);
+  },
+});
+const upload = multer({ storage });
 
 const CCP_PATH = process.env.CCP_PATH;
 const WALLET_PATH = process.env.WALLET_PATH;
@@ -42,11 +57,33 @@ async function getContract() {
   return { contract, gateway };
 }
 
-/**
- * Auth Route (prototype)
- * Uses backend/users.json for demo authentication
- */
-app.post("/api/auth/login", async (req, res) => {
+// Middleware
+function authenticateMiddleware(req, res, next) {
+  if (req.path === "/auth/login") return next();
+
+  // Public Queries
+  if (
+    req.method === "GET" &&
+    (req.path.startsWith("/getProduce") || req.path.startsWith("/getUser"))
+  ) {
+    return next();
+  }
+
+  const header = req.headers["authorization"];
+  if (!header)
+    return res.status(401).json({ error: "missing authorization header" });
+  const token = header.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "missing token" });
+  jwt.verify(token, JWT_SECRET, (err, payload) => {
+    if (err) return res.status(403).json({ error: "invalid token" });
+    req.user = payload;
+    next();
+  });
+}
+
+// User Authentication
+// Prototype: Uses backend/users.json
+app.post("/api/auth/login", bodyParser.json(), async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password)
@@ -73,32 +110,25 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// Middleware
-function authenticateMiddleware(req, res, next) {
-  if (req.path === "/auth/login") return next();
-
-  // Public Queries
-  if (
-    req.method === "GET" &&
-    (req.path.startsWith("/getProduce") ||
-      req.path.startsWith("/getProduceByOwner"))
-  ) {
-    return next();
+app.post(
+  "/api/uploadImage",
+  authenticateMiddleware,
+  upload.single("image"),
+  (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "no image file uploaded" });
+    }
+    try {
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${
+        req.file.filename
+      }`;
+      res.json({ url: fileUrl });
+    } catch (err) {
+      console.error("upload error", err);
+      res.status(500).json({ error: "failed to process image upload" });
+    }
   }
-
-  const header = req.headers["authorization"];
-  if (!header)
-    return res.status(401).json({ error: "missing authorization header" });
-  const token = header.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "missing token" });
-  jwt.verify(token, JWT_SECRET, (err, payload) => {
-    if (err) return res.status(403).json({ error: "invalid token" });
-    req.user = payload;
-    next();
-  });
-}
-
-app.use("/api", authenticateMiddleware);
+);
 
 // Functions
 const router = express.Router();
@@ -319,7 +349,9 @@ router.get("/getUser/:userKey", async (req, res) => {
   }
 });
 
-app.use("/api", router);
+app.use("/api", authenticateMiddleware, bodyParser.json(), router);
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Backend server listening on ${PORT}`));
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`Backend server listening on ${PORT}`)
+);

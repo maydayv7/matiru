@@ -69,6 +69,7 @@ class ProduceContract extends Contract {
       quality: details.quality || null,
       expiryDate: details.expiryDate || null,
       storageConditions: details.storageConditions || [],
+      imageUrl: details.imageUrl || null,
       status: "Harvested",
       isAvailable: true,
       notAvailableReason: null,
@@ -180,6 +181,7 @@ class ProduceContract extends Contract {
       produce.pricePerUnit = details.pricePerUnit;
     if (details.storageConditions !== undefined)
       produce.storageConditions = details.storageConditions;
+    if (details.imageUrl !== undefined) produce.imageUrl = details.imageUrl;
     produce.totalPrice = (produce.pricePerUnit || 0) * (produce.qty || 0);
 
     produce.actionHistory.push(

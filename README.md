@@ -42,7 +42,6 @@ After initial setup, you can use the following commands:
 ```
 ./network.sh up # Start network
 ./network.sh down # Reset everything -> Need to setup again
-
 ```
 
 4. Deploy Chaincode:
@@ -80,6 +79,8 @@ CHAINCODE=produce
 IDENTITY=USER_NAME
 AS_LOCALHOST=true
 ```
+
+Make sure the port is not blocked by a firewall
 
 7. Start `backend`:
 

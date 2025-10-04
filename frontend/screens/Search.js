@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -44,10 +45,60 @@ export default function SearchScreen({ navigation }) {
     }
   };
 
+  const renderTimeline = (produce) => (
+    <View style={{ marginTop: 14 }}>
+      <Text style={local.subtitle}>Journey Timeline</Text>
+      {produce.actionHistory?.map((a, idx) => (
+        <View key={idx} style={local.timelineItem}>
+          <MaterialCommunityIcons
+            name={
+              a.action === "REGISTER"
+                ? "sprout"
+                : a.action === "MOVE"
+                  ? "truck"
+                  : a.action === "SALE"
+                    ? "cash"
+                    : a.action === "INSPECT"
+                      ? "check-decagram"
+                      : "close-circle"
+            }
+            size={22}
+            color={
+              a.action === "REMOVED"
+                ? "red"
+                : a.action === "SALE"
+                  ? "orange"
+                  : colors.darkGreen
+            }
+          />
+          <View style={{ marginLeft: 8 }}>
+            <Text style={{ fontWeight: "600" }}>
+              {a.action} at {a.currentLocation || "N/A"}
+            </Text>
+            <Text style={local.small}>
+              Owner: {a.currentOwner} | Time: {a.timestamp}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
   const renderProduce = (produce) => (
     <View style={local.card}>
-      <Text style={local.title}>Produce ID: {produce.id}</Text>
-      <Text>Crop: {produce.cropType}</Text>
+      {produce.imageUrl && (
+        <Image
+          source={{ uri: produce.imageUrl }}
+          style={{
+            width: "100%",
+            height: 200,
+            borderRadius: 10,
+            marginBottom: 12,
+          }}
+          resizeMode="cover"
+        />
+      )}
+      <Text style={local.title}>{produce.cropType}</Text>
       <Text>
         Quantity: {produce.qty} {produce.qtyUnit}
       </Text>
@@ -56,70 +107,13 @@ export default function SearchScreen({ navigation }) {
       <Text>Status: {produce.status}</Text>
       <Text>Owner: {produce.currentOwner}</Text>
       <Text>Location: {produce.currentLocation}</Text>
+      <Text>Storage: {produce.storageConditions}</Text>
       <Text>Harvest Date: {produce.harvestDate}</Text>
-      <Text>Expiry: {produce.expiryDate}</Text>
+      <Text>Expiry Date: {produce.expiryDate}</Text>
       <Text>Available: {produce.isAvailable ? "Yes" : "No"}</Text>
-
-      {/* Provenance Timeline */}
-      {produce.actionHistory && (
-        <View style={{ marginTop: 14 }}>
-          <Text style={local.subtitle}>Action History:</Text>
-          {produce.actionHistory.map((a, idx) => (
-            <View key={idx} style={local.timelineItem}>
-              <Text>
-                • {a.timestamp} → {a.action}
-              </Text>
-              <Text style={local.small}>
-                Location: {a.currentLocation || "N/A"} | Owner:{" "}
-                {a.currentOwner || "N/A"}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {produce.saleHistory && produce.saleHistory.length > 0 && (
-        <View style={{ marginTop: 14 }}>
-          <Text style={local.subtitle}>Sale History:</Text>
-          {produce.saleHistory.map((s, idx) => (
-            <View key={idx} style={local.timelineItem}>
-              <Text>
-                • {s.timestamp} → {s.prevOwner} → {s.newOwner}
-              </Text>
-              <Text style={local.small}>
-                Qty: {s.qtyBought}, Price: {s.salePrice}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
+      {renderTimeline(produce)}
     </View>
   );
-
-  const renderResults = () => {
-    if (!result) return null;
-
-    if (tab === "Produce" && result.produce) {
-      return renderProduce(result.produce);
-    }
-    if (tab === "User" && result.user) {
-      const u = result.user;
-      return (
-        <View style={local.card}>
-          <Text style={local.title}>{u.role} Profile</Text>
-          <Text>ID: {u.id}</Text>
-          <Text>Name: {u.name}</Text>
-          {u.location && <Text>Location: {u.location}</Text>}
-          {u.walletId && <Text>Wallet: {u.walletId}</Text>}
-          {u.certification && (
-            <Text>Certifications: {u.certification.join(", ")}</Text>
-          )}
-        </View>
-      );
-    }
-
-    return <Text style={{ color: "red" }}>No results found.</Text>;
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,6 +121,7 @@ export default function SearchScreen({ navigation }) {
         title="Global Search"
         navigation={navigation}
         hideSearchButton={true}
+        showBack={true}
       />
 
       <Text style={{ marginBottom: 12, color: colors.darkGreen }}>
@@ -169,7 +164,6 @@ export default function SearchScreen({ navigation }) {
         ))}
       </View>
 
-      {/* ✅ For Produce tab → show scanner + input */}
       {tab === "Produce" ? (
         <Scanner value={input} onChange={setInput} />
       ) : (
@@ -187,7 +181,30 @@ export default function SearchScreen({ navigation }) {
 
       <ScrollView style={{ marginTop: 20, paddingHorizontal: 12 }}>
         {loading && <Text>Loading...</Text>}
-        {!loading && renderResults()}
+        {!loading &&
+          result &&
+          (tab === "Produce" && result.produce ? (
+            renderProduce(result.produce)
+          ) : tab === "User" && result.user ? (
+            <View style={local.card}>
+              <Text style={local.title}>{result.user.role} Profile</Text>
+              <Text>ID: {result.user.id}</Text>
+              <Text>Name: {result.user.name}</Text>
+              {result.user.location && (
+                <Text>Location: {result.user.location}</Text>
+              )}
+              {result.user.walletId && (
+                <Text>Wallet: {result.user.walletId}</Text>
+              )}
+              {result.user.certification && (
+                <Text>
+                  Certifications: {result.user.certification.join(", ")}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <Text>No results found.</Text>
+          ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -202,8 +219,17 @@ const local = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: "#fafafa",
   },
-  title: { fontWeight: "700", marginBottom: 6, fontSize: 16 },
-  subtitle: { fontWeight: "600", marginTop: 6, marginBottom: 4 },
-  timelineItem: { marginLeft: 8, marginBottom: 4 },
+  title: {
+    fontWeight: "700",
+    marginBottom: 6,
+    fontSize: 18,
+    color: colors.darkGreen,
+  },
+  subtitle: { fontWeight: "600", marginTop: 6, marginBottom: 4, fontSize: 16 },
+  timelineItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 6,
+  },
   small: { fontSize: 12, color: "#555" },
 });

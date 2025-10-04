@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useRef } from "react";
 import {
   Alert,
   ScrollView,
@@ -13,6 +13,7 @@ import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
 import QRModal from "../components/QRModal";
+import ImageUploader from "../components/ImageUploader";
 import { API_BASE } from "../config";
 import styles from "../styles";
 import { AuthContext } from "../AuthContext";
@@ -23,6 +24,7 @@ export default function FarmerScreen({ navigation, route }) {
   const token = user?.token;
 
   const [active, setActive] = useState(null);
+  const imageUploaderRef = useRef(null);
 
   // Common
   const [produceId, setProduceId] = useState("");
@@ -45,6 +47,7 @@ export default function FarmerScreen({ navigation, route }) {
   const [qrVisible, setQrVisible] = useState(false);
   const [lastProduceId, setLastProduceId] = useState(null);
 
+  // Reset
   const resetRegisterForm = () => {
     setCropType("");
     setQty("");
@@ -55,14 +58,18 @@ export default function FarmerScreen({ navigation, route }) {
     setExpiryDate("");
     setStorageConditions("");
     setLocation("");
+    imageUploaderRef.current?.reset();
   };
 
   const resetCommon = () => {
     setProduceId("");
   };
 
+  // Functions
   const registerProduce = async () => {
     try {
+      const imageUrl = await imageUploaderRef.current?.upload();
+
       const res = await fetch(`${API_BASE}/registerProduce`, {
         method: "POST",
         headers: {
@@ -72,6 +79,7 @@ export default function FarmerScreen({ navigation, route }) {
         body: JSON.stringify({
           farmerId: userId,
           details: {
+            imageUrl,
             cropType,
             qty: parseFloat(qty) || 0,
             qtyUnit,
@@ -103,6 +111,11 @@ export default function FarmerScreen({ navigation, route }) {
   };
 
   const updateDetails = async () => {
+    if (!produceId) {
+      Alert.alert("Error", "Please enter Produce ID");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/updateDetails`, {
         method: "POST",
@@ -125,7 +138,6 @@ export default function FarmerScreen({ navigation, route }) {
       if (!res.ok) throw new Error(data.error || "Error");
 
       Alert.alert("Updated", "Produce details updated");
-      // Reset inputs for update flow only
       resetCommon();
       setPricePerUnit("");
       setStorageConditions("");
@@ -135,6 +147,11 @@ export default function FarmerScreen({ navigation, route }) {
   };
 
   const splitProduce = async () => {
+    if (!produceId || !splitQty) {
+      Alert.alert("Error", "Please enter Produce ID quantity to split");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/splitProduce`, {
         method: "POST",
@@ -160,6 +177,11 @@ export default function FarmerScreen({ navigation, route }) {
   };
 
   const updateLocation = async () => {
+    if (!produceId || !location) {
+      Alert.alert("Error", "Please enter Produce ID and pick a location");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/updateLocation`, {
         method: "POST",
@@ -175,6 +197,7 @@ export default function FarmerScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
+
       Alert.alert("Moved", "Location updated successfully");
       resetCommon();
       setLocation("");
@@ -267,11 +290,12 @@ export default function FarmerScreen({ navigation, route }) {
               onChangeText={setStorageConditions}
             />
             <LocationPicker value={location} onChange={setLocation} />
+            <ImageUploader ref={imageUploaderRef} token={token} />
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={registerProduce}
             >
-              <Text style={styles.buttonText}>Submit Registration</Text>
+              <Text style={styles.buttonText}>Register Produce</Text>
             </TouchableOpacity>
           </View>
         )}
