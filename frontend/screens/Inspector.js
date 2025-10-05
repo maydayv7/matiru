@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import ScreenHeader from "../components/ScreenHeader";
 import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
+import DatePicker from "../components/DatePicker";
 import { API_BASE } from "../config";
 import styles, { colors } from "../styles";
 import { AuthContext } from "../AuthContext";
@@ -103,11 +104,10 @@ export default function InspectorScreen({ navigation, route }) {
               value={quality}
               onChangeText={setQuality}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Expiry Date (YYYY-MM-DD)"
+            <DatePicker
+              label="Expiry Date"
               value={expiryDate}
-              onChangeText={setExpiryDate}
+              onChange={setExpiryDate}
             />
             <View
               style={{

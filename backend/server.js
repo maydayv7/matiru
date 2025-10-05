@@ -1,7 +1,6 @@
 "use strict";
 require("dotenv").config();
 const express = require("express");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 const morgan = require("morgan");
 const fs = require("fs");
@@ -81,7 +80,7 @@ function authenticateMiddleware(req, res, next) {
 
 // User Authentication
 // Prototype: Uses backend/users.json
-app.post("/api/auth/login", bodyParser.json(), async (req, res) => {
+app.post("/api/auth/login", express.json(), async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password)
@@ -346,7 +345,7 @@ router.get("/getUser/:userKey", async (req, res) => {
   }
 });
 
-app.use("/api", authenticateMiddleware, bodyParser.json(), router);
+app.use("/api", authenticateMiddleware, express.json(), router);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, "0.0.0.0", () =>

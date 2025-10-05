@@ -14,6 +14,7 @@ import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
 import QRModal from "../components/QRModal";
 import ImageUploader from "../components/ImageUploader";
+import DatePicker from "../components/DatePicker";
 import { API_BASE } from "../config";
 import styles from "../styles";
 import { AuthContext } from "../AuthContext";
@@ -112,7 +113,7 @@ export default function FarmerScreen({ navigation, route }) {
       setLastProduceId(produced.id);
       setQrVisible(true);
 
-      Alert.alert("Registered", "Produce registered successfully");
+      console.info("Registered", "Produce registered successfully");
       resetRegisterForm();
       resetCommon();
     } catch (err) {
@@ -317,11 +318,10 @@ export default function FarmerScreen({ navigation, route }) {
               value={pricePerUnit}
               onChangeText={setPricePerUnit}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Harvest Date (YYYY-MM-DD)"
+            <DatePicker
+              label="Harvest Date"
               value={harvestDate}
-              onChangeText={setHarvestDate}
+              onChange={setHarvestDate}
             />
             <TextInput
               style={styles.input}
@@ -329,11 +329,10 @@ export default function FarmerScreen({ navigation, route }) {
               value={quality}
               onChangeText={setQuality}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Expiry Date (YYYY-MM-DD)"
+            <DatePicker
+              label="Expiry Date"
               value={expiryDate}
-              onChangeText={setExpiryDate}
+              onChange={setExpiryDate}
             />
             <TextInput
               style={styles.input}

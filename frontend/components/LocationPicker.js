@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, TextInput, Button, Text, Alert } from "react-native";
 import * as Location from "expo-location";
-import { colors } from "../styles";
+import styles, { colors } from "../styles";
 
 export default function LocationPicker({ value, onChange }) {
   const [coords, setCoords] = useState(null);
@@ -49,14 +49,7 @@ export default function LocationPicker({ value, onChange }) {
         onPress={pickLocation}
       />
       <TextInput
-        style={{
-          borderWidth: 1,
-          borderColor: colors.darkGreen,
-          borderRadius: 10,
-          padding: 12,
-          marginTop: 8,
-          backgroundColor: "white",
-        }}
+        style={[styles.input, { marginTop: 10 }]}
         placeholder="Enter Location Name"
         value={value}
         onChangeText={onChange}

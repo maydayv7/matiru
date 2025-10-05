@@ -1,5 +1,3 @@
-// screens/Home.js
-import React from "react";
 import {
   ImageBackground,
   ScrollView,
@@ -27,7 +25,7 @@ export default function HomeScreen({ navigation }) {
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.overlay}>
           <View style={styles.topContent}>
-            <Text style={styles.welcome}>Welcome to Matiru!</Text>
+            <Text style={styles.welcome}>Welcome!</Text>
 
             <TouchableOpacity
               style={[
