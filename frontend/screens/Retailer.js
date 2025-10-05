@@ -212,6 +212,20 @@ export default function RetailerScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      <View style={{ padding: 12 }}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() =>
+            navigation.navigate("Inventory", {
+              userId,
+              role: "Retailer",
+            })
+          }
+        >
+          <Text style={styles.secondaryButtonText}>View Inventory</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

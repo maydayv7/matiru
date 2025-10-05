@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,23 +17,10 @@ import RNPickerSelect from "react-native-picker-select";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import ScreenHeader from "../components/ScreenHeader";
 import Scanner from "../components/Scanner";
+import ProduceCard from "../components/ProduceCard";
+import DetailRow from "../components/DetailRow";
 import { API_BASE } from "../config";
 import styles, { colors } from "../styles";
-
-const DetailRow = ({ icon, label, value }) => (
-  <View style={local.detailItem}>
-    <MaterialCommunityIcons
-      name={icon}
-      size={20}
-      color={colors.darkGreen}
-      style={{ marginRight: 12 }}
-    />
-    <View style={{ flex: 1 }}>
-      <Text style={local.detailLabel}>{label}</Text>
-      <Text style={local.detailValue}>{value}</Text>
-    </View>
-  </View>
-);
 
 export default function SearchScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -50,18 +36,16 @@ export default function SearchScreen({ navigation }) {
   const fetchResult = async () => {
     const isProduceSearch = tab === "Produce";
     const searchInput = isProduceSearch ? produceId : userId;
-    if (!searchInput.trim()) {
-      return Alert.alert("Invalid Input", "Please enter a valid ID to search.");
-    }
+    if (!searchInput.trim())
+      return Alert.alert("Invalid Input", "Please enter a valid ID to search");
 
     try {
       setLoading(true);
       setResult(null);
 
       let url = "";
-      if (isProduceSearch) {
-        url = `${API_BASE}/getProduce/${produceId.trim()}`;
-      } else {
+      if (isProduceSearch) url = `${API_BASE}/getProduce/${produceId.trim()}`;
+      else {
         const userKey = `${userRole}-${userId.trim()}`;
         url = `${API_BASE}/getUser/${userKey}`;
       }
@@ -69,7 +53,7 @@ export default function SearchScreen({ navigation }) {
       const res = await fetch(url);
       const data = await res.json();
       if (!res.ok)
-        throw new Error(data.error || `Server returned status ${res.status}`);
+        throw new Error(data.error || `Server returned ${res.status}`);
       setResult(data);
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -125,97 +109,6 @@ export default function SearchScreen({ navigation }) {
     </View>
   );
 
-  const renderProduce = (produce) => (
-    <View style={local.card}>
-      <View style={local.header}>
-        <Text style={local.refNoText}>Ref. No.</Text>
-        <Text style={local.refNoId}>{produce.id}</Text>
-      </View>
-      <View style={local.splitRow}>
-        <View style={{ flex: 1, marginRight: 8 }}>
-          <Text style={local.detailLabel}>Name</Text>
-          <Text style={local.title}>{produce.cropType}</Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={local.detailLabel}>Type / Quality</Text>
-          <Text style={local.title}>{produce.quality || "N/A"}</Text>
-        </View>
-      </View>
-      <View style={local.mainContentRow}>
-        {produce.imageUrl ? (
-          <Image
-            source={{ uri: produce.imageUrl }}
-            style={local.produceImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[local.produceImage, local.imagePlaceholder]}>
-            <MaterialCommunityIcons
-              name="image-off"
-              size={40}
-              color={colors.midGreen}
-            />
-          </View>
-        )}
-        <View style={local.detailsContainer}>
-          <DetailRow
-            icon="weight-kilogram"
-            label="Quantity"
-            value={`${produce.qty} ${produce.qtyUnit}`}
-          />
-          <DetailRow
-            icon="cash"
-            label="Price"
-            value={`₹${produce.pricePerUnit} / ${produce.qtyUnit}`}
-          />
-          <DetailRow
-            icon="account-circle-outline"
-            label="Current Owner"
-            value={produce.currentOwner}
-          />
-        </View>
-      </View>
-      <View style={local.splitRow}>
-        <View style={{ flex: 1, marginRight: 8 }}>
-          <DetailRow
-            icon="calendar-arrow-left"
-            label="Date of Harvest"
-            value={new Date(produce.harvestDate).toLocaleDateString()}
-          />
-        </View>
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          <DetailRow
-            icon="calendar-arrow-right"
-            label="Date of Expiry"
-            value={new Date(produce.expiryDate).toLocaleDateString()}
-          />
-        </View>
-      </View>
-      <View style={local.badgesRow}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {produce.certification?.length > 0 ? (
-            produce.certification.map((cert, idx) => (
-              <View key={idx} style={local.certContainer}>
-                <MaterialCommunityIcons
-                  name="shield-check"
-                  size={20}
-                  color={colors.darkGreen}
-                />
-                <Text style={local.certText}>{cert}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={{ color: "#666" }}>No certifications</Text>
-          )}
-        </View>
-        <View style={local.statusContainer}>
-          <Text style={local.statusText}>{produce.status}</Text>
-        </View>
-      </View>
-      {renderTimeline(produce)}
-    </View>
-  );
-
   const renderUser = (user) => (
     <View style={local.card}>
       <View style={local.userHeader}>
@@ -261,9 +154,6 @@ export default function SearchScreen({ navigation }) {
           paddingHorizontal: 4,
         }}
         keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled={true}
-        showsVerticalScrollIndicator={true}
-        scrollIndicatorInsets={{ bottom: insets.bottom }}
       >
         <ScreenHeader
           title="Global Search"
@@ -376,19 +266,24 @@ export default function SearchScreen({ navigation }) {
           />
         )}
 
-        {!loading &&
-          result &&
-          (tab === "Produce" && result.produce ? (
-            renderProduce(result.produce)
-          ) : tab === "User" && result.user ? (
-            renderUser(result.user)
-          ) : (
-            <View style={local.card}>
-              <Text style={{ textAlign: "center", fontWeight: "500" }}>
-                No results found for provided ID
-              </Text>
-            </View>
-          ))}
+        {!loading && result && (
+          <>
+            {tab === "Produce" && result.produce ? (
+              <View style={{ marginTop: 16 }}>
+                <ProduceCard produce={result.produce} />
+                {renderTimeline(result.produce)}
+              </View>
+            ) : tab === "User" && result.user ? (
+              <View style={{ marginTop: 16 }}>{renderUser(result.user)}</View>
+            ) : (
+              <View style={local.card}>
+                <Text style={{ textAlign: "center", fontWeight: "500" }}>
+                  No results found for provided ID
+                </Text>
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -261,6 +261,20 @@ export default function DistributorScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      <View style={{ padding: 12 }}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() =>
+            navigation.navigate("Inventory", {
+              userId,
+              role: "Distributor",
+            })
+          }
+        >
+          <Text style={styles.secondaryButtonText}>View Inventory</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

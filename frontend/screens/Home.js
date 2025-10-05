@@ -32,7 +32,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               style={[
                 styles.bigButton,
-                { backgroundColor: "#444", marginBottom: 30 },
+                { backgroundColor: colors.gray, marginBottom: 30 },
               ]}
               onPress={() => navigation.navigate("Search")}
             >

@@ -9,6 +9,7 @@ export const colors = {
   lightGreen: "#DCEFCF",
   accent: "#BEE7A9",
   danger: "#C04A4A",
+  gray: "#444",
 };
 
 export default StyleSheet.create({
@@ -140,5 +141,21 @@ export default StyleSheet.create({
     color: "white",
     fontSize: 18,
     fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: colors.midGreen,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  secondaryButtonText: {
+    color: colors.midGreen,
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

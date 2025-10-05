@@ -40,6 +40,43 @@ class ProduceContract extends Contract {
     };
   }
 
+  // Find user state by ID
+  async _findUserKeyById(ctx, id) {
+    if (!id) return null;
+    const roles = ["FARMER", "DISTRIBUTOR", "RETAILER", "INSPECTOR"];
+    for (const r of roles) {
+      const key = `${r}-${id}`;
+      const data = await ctx.stub.getState(key);
+      if (data && data.length > 0) return key;
+    }
+    return null;
+  }
+
+  async _getUserById(ctx, id) {
+    const key = await this._findUserKeyById(ctx, id);
+    if (!key) return null;
+    const data = await ctx.stub.getState(key);
+    if (!data || data.length === 0) return null;
+    return { key, user: JSON.parse(data.toString()) };
+  }
+
+  async _addOwnedProduceToUser(ctx, userKey, userObj, produceId) {
+    userObj.ownedProduce = userObj.ownedProduce || [];
+    if (!userObj.ownedProduce.includes(produceId)) {
+      userObj.ownedProduce.push(produceId);
+      await this._putState(ctx, userKey, userObj);
+    }
+  }
+
+  async _removeOwnedProduceFromUser(ctx, userKey, userObj, produceId) {
+    userObj.ownedProduce = userObj.ownedProduce || [];
+    const idx = userObj.ownedProduce.indexOf(produceId);
+    if (idx >= 0) {
+      userObj.ownedProduce.splice(idx, 1);
+      await this._putState(ctx, userKey, userObj);
+    }
+  }
+
   // Initialize ledger
   async initLedger(ctx) {
     console.info("Ledger initialized");
@@ -50,9 +87,8 @@ class ProduceContract extends Contract {
   async registerProduce(ctx, farmerId, detailsStr) {
     const farmerKey = `FARMER-${farmerId}`;
     const farmerState = await ctx.stub.getState(farmerKey);
-    if (!farmerState || farmerState.length === 0) {
+    if (!farmerState || farmerState.length === 0)
       throw new Error(`Farmer ${farmerId} is not registered`);
-    }
     const farmer = JSON.parse(farmerState.toString());
 
     const details = JSON.parse(detailsStr || "{}");
@@ -78,7 +114,7 @@ class ProduceContract extends Contract {
       expiryDate: details.expiryDate || null,
       storageConditions: details.storageConditions || [],
       imageUrl: details.imageUrl || null,
-      certification: farmer.certification || [],
+      certification: details.certification || farmer.certification || [],
       status: "Harvested",
       isAvailable: true,
       notAvailableReason: null,
@@ -91,9 +127,13 @@ class ProduceContract extends Contract {
     );
     await this._putState(ctx, id, produce);
 
-    farmer.registeredProduce = farmer.registeredProduce || [];
-    farmer.registeredProduce.push(id);
-    await this._putState(ctx, farmerKey, farmer);
+    const farmerObj = farmer;
+    farmerObj.registeredProduce = farmerObj.registeredProduce || [];
+    if (!farmerObj.registeredProduce.includes(id))
+      farmerObj.registeredProduce.push(id);
+    farmerObj.ownedProduce = farmerObj.ownedProduce || [];
+    if (!farmerObj.ownedProduce.includes(id)) farmerObj.ownedProduce.push(id);
+    await this._putState(ctx, farmerKey, farmerObj);
 
     return produce;
   }
@@ -163,6 +203,18 @@ class ProduceContract extends Contract {
     }
 
     await this._putState(ctx, produceId, produce);
+
+    const inspectorKey = `INSPECTOR-${inspectorId}`;
+    const inspectorState = await ctx.stub.getState(inspectorKey);
+    if (inspectorState && inspectorState.length > 0) {
+      const inspectorObj = JSON.parse(inspectorState.toString());
+      inspectorObj.inspectedProduce = inspectorObj.inspectedProduce || [];
+      if (!inspectorObj.inspectedProduce.includes(produceId)) {
+        inspectorObj.inspectedProduce.push(produceId);
+        await this._putState(ctx, inspectorKey, inspectorObj);
+      }
+    }
+
     return produce;
   }
 
@@ -171,9 +223,8 @@ class ProduceContract extends Contract {
     const details = JSON.parse(detailsStr || "{}");
     const produce = await this._getState(ctx, produceId);
 
-    if (produce.currentOwner !== actorId) {
+    if (produce.currentOwner !== actorId)
       throw new Error("Only current owner can update details");
-    }
 
     if (details.pricePerUnit !== undefined)
       produce.pricePerUnit = details.pricePerUnit;
@@ -235,6 +286,16 @@ class ProduceContract extends Contract {
     await this._putState(ctx, produce.id, produce);
     await this._putState(ctx, childId, child);
 
+    const ownerRes = await this._getUserById(ctx, ownerId);
+    if (ownerRes) {
+      await this._addOwnedProduceToUser(
+        ctx,
+        ownerRes.key,
+        ownerRes.user,
+        childId
+      );
+    }
+
     return { parent: produce, child };
   }
 
@@ -251,6 +312,7 @@ class ProduceContract extends Contract {
 
     let resultAssetId = produceId;
     if (qty < produce.qty) {
+      // Partial Transfer
       const splitRes = await this.splitProduce(
         ctx,
         produceId,
@@ -276,7 +338,28 @@ class ProduceContract extends Contract {
       });
       await this._putState(ctx, child.id, child);
       resultAssetId = child.id;
+
+      const prevOwnerRes = await this._getUserById(ctx, currentOwner);
+      if (prevOwnerRes) {
+        await this._removeOwnedProduceFromUser(
+          ctx,
+          prevOwnerRes.key,
+          prevOwnerRes.user,
+          child.id
+        );
+      }
+
+      const newOwnerRes = await this._getUserById(ctx, newOwnerId);
+      if (newOwnerRes) {
+        await this._addOwnedProduceToUser(
+          ctx,
+          newOwnerRes.key,
+          newOwnerRes.user,
+          child.id
+        );
+      }
     } else {
+      // Full Transfer
       produce.currentOwner = newOwnerId;
       produce.actionHistory.push(
         this._actionItem(ctx, "SALE", produce.currentLocation, newOwnerId, {
@@ -295,6 +378,26 @@ class ProduceContract extends Contract {
       });
       await this._putState(ctx, produceId, produce);
       resultAssetId = produceId;
+
+      const prevOwnerRes = await this._getUserById(ctx, currentOwner);
+      if (prevOwnerRes) {
+        await this._removeOwnedProduceFromUser(
+          ctx,
+          prevOwnerRes.key,
+          prevOwnerRes.user,
+          produceId
+        );
+      }
+
+      const newOwnerRes = await this._getUserById(ctx, newOwnerId);
+      if (newOwnerRes) {
+        await this._addOwnedProduceToUser(
+          ctx,
+          newOwnerRes.key,
+          newOwnerRes.user,
+          produceId
+        );
+      }
     }
 
     return { newAssetId: resultAssetId };
@@ -382,19 +485,33 @@ class ProduceContract extends Contract {
     const id = details.id || `USER-${ctx.stub.getTxID()}`;
     const key = `${role.toUpperCase()}-${id}`;
 
-    const user = {
+    const base = {
       role,
       id,
       name: details.name || "",
       location: details.location || "",
       walletId: details.walletId || "",
-      registeredProduce: [],
-      ownedProduce: [],
-      inventory: [],
     };
 
-    if (role.toUpperCase() === "FARMER") {
-      user.certification = details.certification || [];
+    let user = null;
+    const roleUpper = role.toUpperCase();
+    if (roleUpper === "FARMER") {
+      user = {
+        ...base,
+        registeredProduce: details.registeredProduce || [],
+        ownedProduce: details.ownedProduce || [],
+        certification: details.certification || [],
+      };
+    } else if (roleUpper === "DISTRIBUTOR" || roleUpper === "RETAILER") {
+      user = {
+        ...base,
+        ownedProduce: details.ownedProduce || [],
+      };
+    } else if (roleUpper === "INSPECTOR") {
+      user = {
+        ...base,
+        inspectedProduce: details.inspectedProduce || [],
+      };
     }
 
     await this._putState(ctx, key, user);

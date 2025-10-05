@@ -44,6 +44,11 @@ export default function FarmerScreen({ navigation, route }) {
   // splitProduce
   const [splitQty, setSplitQty] = useState("");
 
+  // transferOwnership
+  const [newOwnerId, setNewOwnerId] = useState("");
+  const [salePrice, setSalePrice] = useState("");
+  const [transferQty, setTransferQty] = useState("");
+
   // QR Modal
   const [qrVisible, setQrVisible] = useState(false);
   const [lastProduceId, setLastProduceId] = useState(null);
@@ -132,13 +137,13 @@ export default function FarmerScreen({ navigation, route }) {
           produceId,
           actorId: userId,
           details: {
-            pricePerUnit: parseFloat(pricePerUnit),
+            pricePerUnit: pricePerUnit ? parseFloat(pricePerUnit) : undefined,
             storageConditions: storageConditions
               ? storageConditions.split(",").map((c) => c.trim())
-              : [],
+              : undefined,
             certification: certification
               ? certification.split(",").map((c) => c.trim())
-              : [],
+              : undefined,
           },
         }),
       });
@@ -214,6 +219,40 @@ export default function FarmerScreen({ navigation, route }) {
     }
   };
 
+  const transferOwnership = async () => {
+    if (!produceId || !newOwnerId || !transferQty) {
+      Alert.alert(
+        "Error",
+        "Please enter Produce ID, New Owner ID and Quantity"
+      );
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/transferOwnership`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          produceId,
+          newOwnerId,
+          qty: parseFloat(transferQty),
+          salePrice: salePrice ? parseFloat(salePrice) : 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      Alert.alert("Transferred", "Ownership transferred successfully");
+      resetCommon();
+      setNewOwnerId("");
+      setTransferQty("");
+      setSalePrice("");
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
@@ -242,6 +281,11 @@ export default function FarmerScreen({ navigation, route }) {
             icon="map-marker"
             text="Update Location"
             onPress={() => setActive("location")}
+          />
+          <ActionButton
+            icon="cash"
+            text="Transfer Ownership"
+            onPress={() => setActive("transfer")}
           />
         </View>
 
@@ -376,6 +420,38 @@ export default function FarmerScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         )}
+
+        {active === "transfer" && (
+          <View>
+            <Scanner value={produceId} onChange={setProduceId} />
+            <TextInput
+              style={styles.input}
+              placeholder="New Owner ID"
+              value={newOwnerId}
+              onChangeText={setNewOwnerId}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Quantity"
+              keyboardType="numeric"
+              value={transferQty}
+              onChangeText={setTransferQty}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Sale Price"
+              keyboardType="numeric"
+              value={salePrice}
+              onChangeText={setSalePrice}
+            />
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={transferOwnership}
+            >
+              <Text style={styles.buttonText}>Transfer Ownership</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       <QRModal
@@ -383,6 +459,17 @@ export default function FarmerScreen({ navigation, route }) {
         onClose={() => setQrVisible(false)}
         value={lastProduceId || ""}
       />
+
+      <View style={{ padding: 12 }}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() =>
+            navigation.navigate("Inventory", { userId: userId, role: "Farmer" })
+          }
+        >
+          <Text style={styles.secondaryButtonText}>View Inventory</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

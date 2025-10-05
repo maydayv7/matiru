@@ -5,6 +5,7 @@ import { AuthProvider } from "./AuthContext";
 
 import HomeScreen from "./screens/Home";
 import LoginScreen from "./screens/Login";
+import InventoryScreen from "./screens/Inventory";
 import FarmerScreen from "./screens/Farmer";
 import DistributorScreen from "./screens/Distributor";
 import RetailerScreen from "./screens/Retailer";
@@ -27,6 +28,7 @@ function App() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Inventory" component={InventoryScreen} />
         <Stack.Screen name="Farmer" component={FarmerScreen} />
         <Stack.Screen name="Distributor" component={DistributorScreen} />
         <Stack.Screen name="Retailer" component={RetailerScreen} />
