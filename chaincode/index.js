@@ -99,11 +99,11 @@ class ProduceContract extends Contract {
   }
 
   // Update location
-  async updateLocation(ctx, produceId, actorId, newLocationOrInTransit) {
+  async updateLocation(ctx, produceId, actorId, newLocation) {
     const produce = await this._getState(ctx, produceId);
-    if (newLocationOrInTransit === "In Transit") produce.status = "In Transit";
+    if (newLocation === "In Transit") produce.status = "In Transit";
     else {
-      produce.currentLocation = newLocationOrInTransit;
+      produce.currentLocation = newLocation;
       if (produce.status === "Harvested") produce.status = "In Transit";
     }
 

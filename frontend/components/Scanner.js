@@ -27,7 +27,7 @@ export default function Scanner({ value, onChange }) {
 
   const handleScanned = ({ data }) => {
     if (!data) {
-      Alert.alert("Scan Failed", "No data found in QR code.");
+      Alert.alert("Scan Failed", "No data found in QR code");
       return;
     }
 

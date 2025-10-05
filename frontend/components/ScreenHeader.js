@@ -27,7 +27,7 @@ export default function ScreenHeader({
           />
         </TouchableOpacity>
       ) : (
-        <View style={{ width: 28 }} /> // spacer
+        <View style={{ width: 28 }} />
       )}
 
       <Text style={styles.title}>{title}</Text>

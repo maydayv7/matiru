@@ -14,7 +14,7 @@ export default function LocationPicker({ value, onChange }) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission denied", "Enable location services.");
+        Alert.alert("Permission denied", "Enable location services");
         return;
       }
 

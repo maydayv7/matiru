@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import RNPickerSelect from "react-native-picker-select";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import ScreenHeader from "../components/ScreenHeader";
@@ -34,6 +37,8 @@ const DetailRow = ({ icon, label, value }) => (
 );
 
 export default function SearchScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+
   const [tab, setTab] = useState("Produce");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -161,7 +166,7 @@ export default function SearchScreen({ navigation }) {
           <DetailRow
             icon="cash"
             label="Price"
-            value={`$${produce.pricePerUnit} / ${produce.qtyUnit}`}
+            value={`₹${produce.pricePerUnit} / ${produce.qtyUnit}`}
           />
           <DetailRow
             icon="account-circle-outline"
@@ -171,16 +176,20 @@ export default function SearchScreen({ navigation }) {
         </View>
       </View>
       <View style={local.splitRow}>
-        <DetailRow
-          icon="calendar-arrow-left"
-          label="Date of Harvest"
-          value={new Date(produce.harvestDate).toLocaleDateString()}
-        />
-        <DetailRow
-          icon="calendar-arrow-right"
-          label="Date of Expiry"
-          value={new Date(produce.expiryDate).toLocaleDateString()}
-        />
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <DetailRow
+            icon="calendar-arrow-left"
+            label="Date of Harvest"
+            value={new Date(produce.harvestDate).toLocaleDateString()}
+          />
+        </View>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <DetailRow
+            icon="calendar-arrow-right"
+            label="Date of Expiry"
+            value={new Date(produce.expiryDate).toLocaleDateString()}
+          />
+        </View>
       </View>
       <View style={local.badgesRow}>
         <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
@@ -243,108 +252,122 @@ export default function SearchScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScreenHeader
-        title="Global Search"
-        navigation={navigation}
-        hideSearchButton={true}
-        showBack={true}
-      />
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: insets.bottom,
+          paddingHorizontal: 4,
+        }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={true}
+        scrollIndicatorInsets={{ bottom: insets.bottom }}
+      >
+        <ScreenHeader
+          title="Global Search"
+          navigation={navigation}
+          hideSearchButton={true}
+          showBack={true}
+        />
 
-      <View style={local.searchContainer}>
-        <Text
-          style={{
-            marginBottom: 12,
-            color: colors.darkGreen,
-            textAlign: "center",
-          }}
-        >
-          Search for information about any produce or user in the supply chain
-        </Text>
-        <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-          {["Produce", "User"].map((t) => (
-            <TouchableOpacity
-              key={t}
-              style={[
-                local.tabButton,
-                {
-                  backgroundColor:
-                    tab === t ? colors.darkGreen : colors.lightGreen,
-                },
-              ]}
-              onPress={() => {
-                setTab(t);
-                setResult(null);
-                setProduceId("");
-                setUserId("");
-                setUserRole("FARMER");
-              }}
-            >
-              <MaterialCommunityIcons
-                name={t === "Produce" ? "leaf" : "account-badge"}
-                size={20}
-                color={tab === t ? "white" : colors.darkGreen}
+        <View style={local.searchContainer}>
+          <Text
+            style={{
+              marginBottom: 12,
+              color: colors.darkGreen,
+              textAlign: "center",
+            }}
+          >
+            Search for information about any produce or user in the supply chain
+          </Text>
+
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-around" }}
+          >
+            {["Produce", "User"].map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[
+                  local.tabButton,
+                  {
+                    backgroundColor:
+                      tab === t ? colors.darkGreen : colors.lightGreen,
+                  },
+                ]}
+                onPress={() => {
+                  setTab(t);
+                  setResult(null);
+                  setProduceId("");
+                  setUserId("");
+                  setUserRole("FARMER");
+                }}
+              >
+                <MaterialCommunityIcons
+                  name={t === "Produce" ? "leaf" : "account-badge"}
+                  size={20}
+                  color={tab === t ? "white" : colors.darkGreen}
+                />
+                <Text
+                  style={[
+                    local.tabText,
+                    { color: tab === t ? "white" : colors.darkGreen },
+                  ]}
+                >
+                  {t}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {tab === "Produce" ? (
+            <Scanner value={produceId} onChange={setProduceId} />
+          ) : (
+            <View>
+              <Text style={[local.detailLabel, { marginTop: 20 }]}>
+                1. Select Role
+              </Text>
+              <RNPickerSelect
+                onValueChange={(value) => setUserRole(value)}
+                items={[
+                  { label: "Farmer", value: "FARMER" },
+                  { label: "Distributor", value: "DISTRIBUTOR" },
+                  { label: "Retailer", value: "RETAILER" },
+                  { label: "Inspector", value: "INSPECTOR" },
+                ]}
+                style={pickerSelectStyles}
+                value={userRole}
+                useNativeAndroidPickerStyle={false}
+                placeholder={{}}
               />
               <Text
-                style={[
-                  local.tabText,
-                  { color: tab === t ? "white" : colors.darkGreen },
-                ]}
+                style={[local.detailLabel, { marginTop: 20, marginBottom: 6 }]}
               >
-                {t}
+                2. Enter User ID
               </Text>
-            </TouchableOpacity>
-          ))}
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. farmer1, distributor_xyz"
+                value={userId}
+                onChangeText={setUserId}
+              />
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.primaryButton, { marginTop: 20 }]}
+            onPress={fetchResult}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Search</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {tab === "Produce" ? (
-          <Scanner value={produceId} onChange={setProduceId} />
-        ) : (
-          <View>
-            <Text style={[local.detailLabel, { marginTop: 20 }]}>
-              1. Select Role
-            </Text>
-            <RNPickerSelect
-              onValueChange={(value) => setUserRole(value)}
-              items={[
-                { label: "Farmer", value: "FARMER" },
-                { label: "Distributor", value: "DISTRIBUTOR" },
-                { label: "Retailer", value: "RETAILER" },
-                { label: "Inspector", value: "INSPECTOR" },
-              ]}
-              style={pickerSelectStyles}
-              value={userRole}
-              useNativeAndroidPickerStyle={false}
-              placeholder={{}}
-            />
-            <Text
-              style={[local.detailLabel, { marginTop: 20, marginBottom: 6 }]}
-            >
-              2. Enter User ID
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. farmer1, distributor_xyz"
-              value={userId}
-              onChangeText={setUserId}
-            />
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={[styles.primaryButton, { marginTop: 20 }]}
-          onPress={fetchResult}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.buttonText}>Search</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 4 }}>
         {loading && (
           <ActivityIndicator
             size="large"
@@ -362,7 +385,7 @@ export default function SearchScreen({ navigation }) {
           ) : (
             <View style={local.card}>
               <Text style={{ textAlign: "center", fontWeight: "500" }}>
-                No results found for the provided ID.
+                No results found for provided ID
               </Text>
             </View>
           ))}
@@ -447,7 +470,7 @@ const local = StyleSheet.create({
   detailsContainer: {
     flex: 1,
     marginLeft: 16,
-    height: "100%",
+    minHeight: 120,
     justifyContent: "space-around",
   },
   detailItem: {
