@@ -85,6 +85,13 @@ class ProduceContract extends Contract {
   // Functions
   // Produce Registration
   async registerProduce(ctx, farmerId, detailsStr) {
+    const clientMspId = ctx.clientIdentity.getMSPID();
+    if (clientMspId !== "Org1MSP") {
+      throw new Error(
+        `Client from ${clientMspId} is not authorized to register produce. Only Org1MSP is allowed.`
+      );
+    }
+
     const farmerKey = `FARMER-${farmerId}`;
     const farmerState = await ctx.stub.getState(farmerKey);
     if (!farmerState || farmerState.length === 0)
@@ -171,6 +178,13 @@ class ProduceContract extends Contract {
 
   // Produce Inspection
   async inspectProduce(ctx, produceId, inspectorId, qualityUpdateStr) {
+    const clientMspId = ctx.clientIdentity.getMSPID();
+    if (clientMspId !== "Org4MSP") {
+      throw new Error(
+        `Client from ${clientMspId} is not authorized to inspect produce. Only Org4MSP is allowed.`
+      );
+    }
+
     const qualityUpdate = JSON.parse(qualityUpdateStr || "{}");
     const produce = await this._getState(ctx, produceId);
 
@@ -481,9 +495,25 @@ class ProduceContract extends Contract {
 
   // Governance
   async registerUser(ctx, role, detailsStr) {
+    const clientMspId = ctx.clientIdentity.getMSPID();
     const details = JSON.parse(detailsStr || "{}");
+    const roleUpper = role.toUpperCase();
+
+    const roleToOrgMap = {
+      FARMER: "Org1MSP",
+      DISTRIBUTOR: "Org2MSP",
+      RETAILER: "Org3MSP",
+      INSPECTOR: "Org4MSP",
+    };
+
+    const expectedMspId = roleToOrgMap[roleUpper];
+    if (!expectedMspId || clientMspId !== expectedMspId)
+      throw new Error(
+        `Client from ${clientMspId} cannot register a ${role}. Expected admin from ${expectedMspId}.`
+      );
+
     const id = details.id || `USER-${ctx.stub.getTxID()}`;
-    const key = `${role.toUpperCase()}-${id}`;
+    const key = `${roleUpper}-${id}`;
 
     const base = {
       role,
@@ -494,7 +524,6 @@ class ProduceContract extends Contract {
     };
 
     let user = null;
-    const roleUpper = role.toUpperCase();
     if (roleUpper === "FARMER") {
       user = {
         ...base,

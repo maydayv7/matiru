@@ -1,7 +1,7 @@
 {
-  "name": "produce-contract",
+  "name": "matiru-fabric",
+  "description": "Matiru Chaincode",
   "version": "1.0.0",
-  "description": "Matiru produce contract",
   "main": "index.js",
   "scripts": {
     "start": "fabric-chaincode-node start"

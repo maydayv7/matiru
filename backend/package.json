@@ -1,6 +1,7 @@
 {
-  "name": "matiru-backend",
+  "name": "matiru-server",
   "version": "1.0.0",
+  "description": "Matiru Backend",
   "main": "server.js",
   "scripts": {
     "start": "npx nodemon server.js",
