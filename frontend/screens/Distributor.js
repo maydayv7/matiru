@@ -182,7 +182,7 @@ export default function DistributorScreen({ navigation, route }) {
             />
             <TextInput
               style={styles.input}
-              placeholder="New Status (e.g., Removed, Missing)"
+              placeholder="New Status (e.g. Removed, Missing)"
               value={newStatus}
               onChangeText={setNewStatus}
             />

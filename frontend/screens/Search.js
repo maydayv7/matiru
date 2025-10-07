@@ -61,46 +61,51 @@ export default function SearchScreen({ navigation }) {
   const renderTimeline = (produce) => (
     <View>
       <Text style={local.subtitle}>Journey Timeline</Text>
-      {produce.actionHistory?.map((a, idx) => (
-        <View key={idx} style={local.timelineItem}>
-          <MaterialCommunityIcons
-            name={
-              a.action === "REGISTER"
-                ? "sprout"
-                : a.action === "MOVE"
-                  ? "truck-fast"
+      {produce.actionHistory
+        ?.slice()
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .map((a, idx) => (
+          <View key={idx} style={local.timelineItem}>
+            <MaterialCommunityIcons
+              name={
+                a.action === "REGISTER"
+                  ? "sprout"
+                  : a.action === "MOVE"
+                    ? "truck-fast"
+                    : a.action === "SALE"
+                      ? "swap-horizontal-bold"
+                      : a.action === "INSPECT"
+                        ? "check-decagram"
+                        : a.action === "SPLIT"
+                          ? "call-split"
+                          : a.action === "UPDATED"
+                            ? "pencil"
+                            : "close-circle"
+              }
+              size={24}
+              color={
+                a.action === "REMOVED"
+                  ? colors.danger
                   : a.action === "SALE"
-                    ? "swap-horizontal-bold"
-                    : a.action === "INSPECT"
-                      ? "check-decagram"
-                      : "close-circle"
-            }
-            size={24}
-            color={
-              a.action === "REMOVED"
-                ? colors.danger
-                : a.action === "SALE"
-                  ? colors.midGreen
-                  : colors.darkGreen
-            }
-          />
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={{ fontWeight: "600", textTransform: "capitalize" }}>
-              {a.action.toLowerCase()}
-            </Text>
-            <Text style={local.small}>
-              Location: {a.currentLocation || "N/A"}
-            </Text>
-            <Text style={local.small}>
-              {a.action === "INSPECT" ? "Inspected by" : "Actor"}:{" "}
-              {a.currentOwner}
-            </Text>
-            <Text style={local.small}>
-              {new Date(a.timestamp).toLocaleString()}
-            </Text>
+                    ? colors.midGreen
+                    : colors.darkGreen
+              }
+              style={{ marginRight: 12 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "600", textTransform: "capitalize" }}>
+                {a.action.toLowerCase()}
+              </Text>
+              <Text style={local.small}>By: {a.currentOwner}</Text>
+              <Text style={local.small}>
+                On: {new Date(a.timestamp).toLocaleString()}
+              </Text>
+              <Text style={local.small}>
+                Location: {a.currentLocation || "N/A"}
+              </Text>
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
     </View>
   );
 
@@ -129,7 +134,7 @@ export default function SearchScreen({ navigation }) {
       {user.walletId && (
         <DetailRow icon="wallet" label="Wallet ID" value={user.walletId} />
       )}
-      {user.certification && (
+      {user.certification?.length > 0 && (
         <DetailRow
           icon="certificate"
           label="Certifications"
@@ -146,7 +151,6 @@ export default function SearchScreen({ navigation }) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: insets.bottom,
-          paddingHorizontal: 4,
         }}
         keyboardShouldPersistTaps="handled"
       >
@@ -158,18 +162,11 @@ export default function SearchScreen({ navigation }) {
           showBack={true}
         />
         <View style={local.searchContainer}>
-          <Text
-            style={{
-              marginBottom: 12,
-              color: colors.darkGreen,
-              textAlign: "center",
-            }}
-          >
-            Search for information about any produce or user in the supply chain
+          <Text style={local.searchDescription}>
+            Search for information about any produce or user in the supply
+            chain.
           </Text>
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-around" }}
-          >
+          <View style={local.tabContainer}>
             {["Produce", "User"].map((t) => (
               <TouchableOpacity
                 key={t}
@@ -208,9 +205,7 @@ export default function SearchScreen({ navigation }) {
             <Scanner value={produceId} onChange={setProduceId} />
           ) : (
             <View>
-              <Text style={[local.detailLabel, { marginTop: 20 }]}>
-                1. Select Role
-              </Text>
+              <Text style={local.detailLabel}>1. Select Role</Text>
               <RNPickerSelect
                 onValueChange={(value) => setUserRole(value)}
                 items={[
@@ -224,21 +219,19 @@ export default function SearchScreen({ navigation }) {
                 useNativeAndroidPickerStyle={false}
                 placeholder={{}}
               />
-              <Text
-                style={[local.detailLabel, { marginTop: 20, marginBottom: 6 }]}
-              >
+              <Text style={[local.detailLabel, { marginTop: 12 }]}>
                 2. Enter User ID
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. farmer1, distributor_xyz"
+                placeholder="e.g. farmer1, dist1"
                 value={userId}
                 onChangeText={setUserId}
               />
             </View>
           )}
           <TouchableOpacity
-            style={[styles.primaryButton, { marginTop: 20 }]}
+            style={[styles.primaryButton, { marginTop: 16 }]}
             onPress={fetchResult}
             disabled={loading}
           >
@@ -257,22 +250,22 @@ export default function SearchScreen({ navigation }) {
           />
         )}
         {!loading && result && (
-          <>
+          <View style={{ marginTop: 16 }}>
             {tab === "Produce" && result.produce ? (
-              <View style={{ marginTop: 16 }}>
+              <>
                 <ProduceCard produce={result.produce} />
                 {renderTimeline(result.produce)}
-              </View>
+              </>
             ) : tab === "User" && result.user ? (
-              <View style={{ marginTop: 16 }}>{renderUser(result.user)}</View>
+              renderUser(result.user)
             ) : (
               <View style={local.card}>
                 <Text style={{ textAlign: "center", fontWeight: "500" }}>
-                  No results found for provided ID
+                  No results found for the provided ID.
                 </Text>
               </View>
             )}
-          </>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -284,12 +277,23 @@ const local = StyleSheet.create({
     padding: 16,
     backgroundColor: "white",
     borderRadius: 16,
-    marginBottom: 10,
+    margin: 12,
     elevation: 4,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
+  },
+  searchDescription: {
+    marginBottom: 16,
+    color: colors.gray,
+    textAlign: "center",
+    fontSize: 15,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 10,
   },
   tabButton: {
     flex: 1,
@@ -300,14 +304,12 @@ const local = StyleSheet.create({
     borderRadius: 12,
     marginHorizontal: 5,
   },
-  tabText: {
-    marginLeft: 6,
-    fontWeight: "600",
-  },
+  tabText: { marginLeft: 6, fontWeight: "600" },
   card: {
     backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
+    marginHorizontal: 12,
     marginVertical: 10,
     shadowColor: "#000",
     shadowOpacity: 0.1,
@@ -315,116 +317,27 @@ const local = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-  header: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGreen,
-    paddingBottom: 8,
-    marginBottom: 12,
-  },
-  refNoText: {
-    color: "#999",
-    fontSize: 12,
-  },
-  refNoId: {
-    color: colors.darkGreen,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  splitRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  mainContentRow: {
-    flexDirection: "row",
-    marginBottom: 16,
-    alignItems: "center",
-  },
-  produceImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-  },
-  imagePlaceholder: {
-    backgroundColor: colors.cream,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.lightGreen,
-  },
-  detailsContainer: {
-    flex: 1,
-    marginLeft: 16,
-    minHeight: 120,
-    justifyContent: "space-around",
-  },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  detailLabel: {
-    color: "#666",
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  detailValue: {
-    color: "#000",
-    fontSize: 15,
-    fontWeight: "600",
-  },
   title: {
     fontWeight: "700",
     fontSize: 18,
     color: colors.darkGreen,
   },
-  badgesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginVertical: 8,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.lightGreen,
-  },
-  certContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.lightGreen,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  certText: {
-    color: colors.darkGreen,
-    fontWeight: "600",
-    marginLeft: 6,
-  },
-  statusContainer: {
-    backgroundColor: colors.accent,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  statusText: {
-    color: colors.darkGreen,
-    fontWeight: "bold",
-    fontSize: 14,
-  },
   subtitle: {
     fontWeight: "600",
-    marginTop: 12,
+    marginTop: 16,
     marginBottom: 8,
     fontSize: 16,
     color: colors.darkGreen,
+    paddingHorizontal: 12,
   },
   timelineItem: {
     flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 8,
-    paddingLeft: 4,
+    paddingVertical: 12,
+    marginHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGreen,
   },
-  small: { fontSize: 12, color: "#555" },
+  small: { fontSize: 13, color: "#555", marginTop: 2 },
   userHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -450,10 +363,12 @@ const local = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 4,
   },
-  roleText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "bold",
+  roleText: { color: "white", fontSize: 12, fontWeight: "bold" },
+  detailLabel: {
+    color: colors.gray,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
   },
 });
 

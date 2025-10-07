@@ -1,21 +1,21 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, useWindowDimensions } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../styles";
 import DetailRow from "./DetailRow";
 
 export default function ProduceCard({ produce }) {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 380;
   const status = (produce.status || "").toLowerCase();
   const statusStyle = getStatusStyle(status);
 
   return (
     <View style={local.card}>
       <View style={local.header}>
-        <View style={local.headerLeft}>
-          <Text style={local.refNoText}> Ref. No. </Text>
-        </View>
-        <View style={local.headerRight}>
-          <Text style={local.refNoId}>{produce.id}</Text>
-        </View>
+        <Text style={local.refNoText}>Ref. ID </Text>
+        <Text style={local.refNoId} numberOfLines={2} ellipsizeMode="middle">
+          {produce.id}
+        </Text>
       </View>
 
       <View style={local.splitRow}>
@@ -24,20 +24,37 @@ export default function ProduceCard({ produce }) {
           <Text style={local.title}>{produce.cropType || "N/A"}</Text>
         </View>
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={local.detailLabel}>Quality</Text>
-          <Text style={local.title}>{produce.quality || "N/A"}</Text>
+          <Text style={local.detailLabel}>Owner</Text>
+          <Text style={local.title}>{produce.currentOwner}</Text>
         </View>
       </View>
 
-      <View style={local.mainContentRow}>
+      <View
+        style={[
+          local.mainContentRow,
+          isSmallScreen && {
+            flexDirection: "column",
+            alignItems: "flex-start",
+          },
+        ]}
+      >
         {produce.imageUrl ? (
           <Image
             source={{ uri: produce.imageUrl }}
-            style={local.produceImage}
+            style={[
+              local.produceImage,
+              isSmallScreen && { width: "100%", height: 150, marginBottom: 12 },
+            ]}
             resizeMode="cover"
           />
         ) : (
-          <View style={[local.produceImage, local.imagePlaceholder]}>
+          <View
+            style={[
+              local.produceImage,
+              local.imagePlaceholder,
+              isSmallScreen && { width: "100%", height: 150, marginBottom: 12 },
+            ]}
+          >
             <MaterialCommunityIcons
               name="image-off-outline"
               size={40}
@@ -46,9 +63,11 @@ export default function ProduceCard({ produce }) {
           </View>
         )}
 
-        <View style={local.detailsContainer}>
+        <View
+          style={[local.detailsContainer, isSmallScreen && { marginLeft: 0 }]}
+        >
           <DetailRow
-            icon="weight-kilogram"
+            icon="weight"
             label="Quantity"
             value={`${produce.qty} ${produce.qtyUnit}`}
           />
@@ -58,9 +77,14 @@ export default function ProduceCard({ produce }) {
             value={`₹${produce.pricePerUnit} / ${produce.qtyUnit}`}
           />
           <DetailRow
-            icon="account-outline"
-            label="Current Owner"
-            value={produce.currentOwner}
+            icon="shield-star"
+            label="Quality"
+            value={produce.quality || "N/A"}
+          />
+          <DetailRow
+            icon="thermometer"
+            label="Storage Conditions"
+            value={produce.storageConditions?.join(", ") || "N/A"}
           />
         </View>
       </View>
@@ -68,7 +92,7 @@ export default function ProduceCard({ produce }) {
       <View style={local.splitRow}>
         <View style={{ flex: 1, marginRight: 8 }}>
           <DetailRow
-            icon="calendar-arrow-left"
+            icon="calendar-check"
             label="Harvest Date"
             value={
               produce.harvestDate
@@ -79,7 +103,7 @@ export default function ProduceCard({ produce }) {
         </View>
         <View style={{ flex: 1, marginLeft: 8 }}>
           <DetailRow
-            icon="calendar-arrow-right"
+            icon="calendar-alert"
             label="Expiry Date"
             value={
               produce.expiryDate
@@ -100,11 +124,13 @@ export default function ProduceCard({ produce }) {
                   size={16}
                   color={colors.darkGreen}
                 />
-                <Text style={local.certText}>{cert}</Text>
+                <Text style={local.certText}>{cert} </Text>
               </View>
             ))
           ) : (
-            <Text style={{ color: colors.gray }}> No certification </Text>
+            <Text style={{ color: colors.gray, fontSize: 13, flexShrink: 1 }}>
+              No certification
+            </Text>
           )}
         </View>
 
@@ -170,25 +196,24 @@ const local = {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 8,
   },
-  headerLeft: { flexShrink: 0 },
-  headerRight: { flex: 1, marginLeft: 8 },
-  refNoText: { color: colors.gray, fontSize: 12 },
+  refNoText: { color: colors.gray, fontSize: 12, marginRight: 8 },
   refNoId: {
     fontSize: 12,
     fontWeight: "700",
     textAlign: "right",
-    flexWrap: "wrap",
+    flexShrink: 1,
   },
   splitRow: { flexDirection: "row", marginTop: 8 },
   detailLabel: { fontSize: 12, color: colors.gray },
   title: { fontSize: 16, fontWeight: "700" },
-  mainContentRow: { flexDirection: "row", marginTop: 12 },
+  mainContentRow: { flexDirection: "row", marginTop: 12, alignItems: "center" },
   produceImage: {
-    width: 120,
-    height: 120,
+    width: 150,
+    height: 150,
     borderRadius: 8,
-    marginRight: 16,
+    marginRight: 30,
   },
   imagePlaceholder: {
     backgroundColor: "#f4f7f4",
@@ -197,16 +222,20 @@ const local = {
   },
   detailsContainer: { flex: 1 },
   badgesRow: {
-    position: "relative",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginTop: 12,
     flexWrap: "wrap",
-    paddingRight: 100,
+    gap: 8,
   },
   badgesLeft: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
+    flex: 1,
+    minWidth: "60%",
   },
   certPill: {
     flexDirection: "row",
@@ -215,25 +244,16 @@ const local = {
     borderRadius: 16,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    marginRight: 8,
-    marginBottom: 6,
-    maxWidth: "100%",
   },
   certText: {
     marginLeft: 6,
     color: colors.gray,
-    flexShrink: 1,
-    flexWrap: "wrap",
     fontSize: 13,
   },
   statusContainer: {
-    position: "absolute",
-    top: 0,
-    right: 0,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 6,
-    flexShrink: 0,
     alignSelf: "flex-start",
   },
   statusText: {

@@ -1,11 +1,12 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import {
-  View,
-  Text,
-  FlatList,
   ActivityIndicator,
   Alert,
+  FlatList,
+  RefreshControl,
   StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -19,26 +20,47 @@ export default function NotificationsScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user?.token) return;
+    try {
+      const data = await api.getNotifications(user.token);
+      const sorted = (data.notifications || []).sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+      setNotifications(sorted);
+    } catch (err) {
+      Alert.alert("Error", "Failed to fetch notifications.");
+    }
+  }, [user?.token]);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const data = await api.getNotifications(user.token);
-        setNotifications(data.notifications || []);
-      } catch (err) {
-        Alert.alert("Error", "Failed to fetch notifications.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    fetchNotifications().finally(() => setLoading(false));
+  }, [fetchNotifications]);
 
-    fetchNotifications();
-  }, [user.token]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
+  }, [fetchNotifications]);
+
+  const getIconForTitle = (title) => {
+    if (title.toLowerCase().includes("registered")) return "sprout";
+    if (title.toLowerCase().includes("location")) return "map-marker-check";
+    if (title.toLowerCase().includes("inspected")) return "shield-search";
+    if (title.toLowerCase().includes("received")) return "package-down";
+    if (title.toLowerCase().includes("transferred")) return "package-up";
+    if (title.toLowerCase().includes("updated")) return "pencil";
+    if (title.toLowerCase().includes("split")) return "call-split";
+    return "bell";
+  };
 
   const renderItem = ({ item }) => (
     <View style={localStyles.card}>
       <MaterialCommunityIcons
-        name={item.read ? "email-open-outline" : "email-outline"}
+        name={getIconForTitle(item.title)}
         size={24}
         color={colors.darkGreen}
         style={localStyles.icon}
@@ -74,9 +96,12 @@ export default function NotificationsScreen({ navigation }) {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
-            <Text style={localStyles.emptyText}>No notifications</Text>
+            <Text style={localStyles.emptyText}>No notifications found</Text>
           }
           contentContainerStyle={{ paddingHorizontal: 16 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </SafeAreaView>
@@ -113,11 +138,13 @@ const localStyles = StyleSheet.create({
     fontSize: 14,
     color: colors.gray,
     marginTop: 4,
+    lineHeight: 20,
   },
   date: {
     fontSize: 12,
     color: "#999",
     marginTop: 8,
+    textAlign: "right",
   },
   emptyText: {
     textAlign: "center",

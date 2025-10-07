@@ -75,7 +75,7 @@ export default function RetailerScreen({ navigation, route }) {
         },
         token
       );
-      Alert.alert("Transferred", "Sale / Transfer successful");
+      Alert.alert("Transferred", "Transfer successful");
       onComplete();
       setActive(null);
     } catch (err) {

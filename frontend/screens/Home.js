@@ -73,7 +73,7 @@ export default function HomeScreen({ navigation }) {
               }
             >
               <MaterialCommunityIcons
-                name="shield-check"
+                name="shield-search"
                 size={24}
                 color="white"
               />
