@@ -8,43 +8,68 @@ export default function ScreenHeader({
   role,
   showBack,
   hideSearchButton,
+  hideNotificationsButton,
 }) {
   return (
     <View
       style={{
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 16,
       }}
     >
-      {showBack ? (
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={28}
-            color={colors.darkGreen}
-          />
-        </TouchableOpacity>
-      ) : (
-        <View style={{ width: 28 }} />
-      )}
+      <View
+        style={{
+          flex: 1,
+          flexDirection: "row",
+          justifyContent: "flex-start",
+          alignItems: "center",
+        }}
+      >
+        {showBack && (
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={28}
+              color={colors.darkGreen}
+            />
+          </TouchableOpacity>
+        )}
+        {!hideNotificationsButton && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Notifications")}
+            style={{ marginLeft: showBack ? 16 : 0 }}
+          >
+            <MaterialCommunityIcons
+              name="bell-outline"
+              size={28}
+              color={colors.darkGreen}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
 
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { flex: 2, marginBottom: 0 }]}>{title}</Text>
 
-      {!hideSearchButton ? (
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Search", { fromRole: role })}
-        >
-          <MaterialCommunityIcons
-            name="magnify"
-            size={28}
-            color={colors.darkGreen}
-          />
-        </TouchableOpacity>
-      ) : (
-        <View style={{ width: 28 }} />
-      )}
+      <View
+        style={{
+          flex: 1,
+          flexDirection: "row",
+          justifyContent: "flex-end",
+        }}
+      >
+        {!hideSearchButton && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Search", { fromRole: role })}
+          >
+            <MaterialCommunityIcons
+              name="magnify"
+              size={28}
+              color={colors.darkGreen}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }

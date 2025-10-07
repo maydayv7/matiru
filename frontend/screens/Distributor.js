@@ -48,6 +48,7 @@ export default function DistributorScreen({ navigation, route }) {
       Alert.alert("Location Updated", "Location updated successfully");
       resetCommon();
       setLocation("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -77,6 +78,7 @@ export default function DistributorScreen({ navigation, route }) {
       );
       Alert.alert("Transferred", "Ownership transferred successfully");
       onComplete();
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -92,6 +94,7 @@ export default function DistributorScreen({ navigation, route }) {
       resetCommon();
       setReason("");
       setNewStatus("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -114,6 +117,7 @@ export default function DistributorScreen({ navigation, route }) {
       Alert.alert("Updated", "Storage conditions updated successfully");
       resetCommon();
       setStorageConditions("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }

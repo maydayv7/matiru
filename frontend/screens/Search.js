@@ -154,6 +154,7 @@ export default function SearchScreen({ navigation }) {
           title="Global Search"
           navigation={navigation}
           hideSearchButton={true}
+          hideNotificationsButton={true}
           showBack={true}
         />
         <View style={local.searchContainer}>

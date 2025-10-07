@@ -177,6 +177,20 @@ app.post(
 // Functions
 const router = express.Router();
 
+router.get(
+  "/notifications",
+  asyncHandler(async (req, res) => {
+    const notificationsPath = path.join(__dirname, "notifications.json");
+    if (!fs.existsSync(notificationsPath)) {
+      return res.json({ notifications: [] });
+    }
+    const notifications = JSON.parse(
+      fs.readFileSync(notificationsPath, "utf8")
+    );
+    res.json({ notifications });
+  })
+);
+
 router.post(
   "/registerUser",
   asyncHandler(async (req, res) => {

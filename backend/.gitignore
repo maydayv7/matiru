@@ -1,4 +1,7 @@
 users.json
+notifications.json
+uploads
+
+# Fabric
 connections
 wallet
-uploads

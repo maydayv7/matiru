@@ -95,6 +95,7 @@ export default function FarmerScreen({ navigation, route }) {
       setLastProduceId(produce.id);
       setQrVisible(true);
       resetRegisterForm();
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -124,6 +125,7 @@ export default function FarmerScreen({ navigation, route }) {
       setPricePerUnit("");
       setStorageConditions("");
       setCertification("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -144,6 +146,7 @@ export default function FarmerScreen({ navigation, route }) {
       Alert.alert("Split", "Produce split successfully");
       setSplitQty("");
       resetCommon();
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -164,6 +167,7 @@ export default function FarmerScreen({ navigation, route }) {
       Alert.alert("Moved", "Location updated successfully");
       resetCommon();
       setLocation("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -193,6 +197,7 @@ export default function FarmerScreen({ navigation, route }) {
       );
       Alert.alert("Transferred", "Ownership transferred successfully");
       onComplete();
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }

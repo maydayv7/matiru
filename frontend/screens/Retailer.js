@@ -47,6 +47,7 @@ export default function RetailerScreen({ navigation, route }) {
       Alert.alert("Location Updated", "Location updated successfully");
       resetCommon();
       setLocation("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -76,6 +77,7 @@ export default function RetailerScreen({ navigation, route }) {
       );
       Alert.alert("Transferred", "Sale / Transfer successful");
       onComplete();
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -100,6 +102,7 @@ export default function RetailerScreen({ navigation, route }) {
       resetCommon();
       setPricePerUnit("");
       setStorageConditions("");
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }

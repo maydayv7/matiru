@@ -63,6 +63,7 @@ export default function InspectorScreen({ navigation, route }) {
           : "Inspection data submitted successfully."
       );
       resetCommon();
+      setActive(null);
     } catch (err) {
       Alert.alert("Error", err.message);
     }

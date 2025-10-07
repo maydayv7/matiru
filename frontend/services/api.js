@@ -36,6 +36,7 @@ const uploadImage = (formData, token) => {
 export const api = {
   login: (credentials) => request("/auth/login", { body: credentials }),
   uploadImage,
+  getNotifications: (token) => request("/notifications", { token }),
   registerProduce: (data, token) =>
     request("/registerProduce", { body: data, token }),
   updateLocation: (data, token) =>
