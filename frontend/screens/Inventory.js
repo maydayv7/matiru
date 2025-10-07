@@ -8,10 +8,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import ScreenHeader from "../components/ScreenHeader";
 import ProduceCard from "../components/ProduceCard";
+
 import { AuthContext } from "../AuthContext";
-import { API_BASE } from "../config";
+import { api } from "../services/api";
 import styles, { colors } from "../styles";
 
 export default function InventoryScreen({ navigation, route }) {
@@ -25,17 +27,6 @@ export default function InventoryScreen({ navigation, route }) {
     fetchInventory();
   }, []);
 
-  const fetchUserDetails = async (userKey) => {
-    try {
-      const res = await fetch(`${API_BASE}/getUser/${userKey}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error fetching user");
-      return data.user;
-    } catch (err) {
-      throw err;
-    }
-  };
-
   const fetchInventory = async () => {
     try {
       setLoading(true);
@@ -43,24 +34,22 @@ export default function InventoryScreen({ navigation, route }) {
 
       if (role.toUpperCase() === "INSPECTOR") {
         const userKey = `INSPECTOR-${routeUserId}`;
-        const userDetails = await fetchUserDetails(userKey);
+        const { user: userDetails } = await api.getUserDetails(userKey);
         const inspected = userDetails.inspectedProduce || [];
         const items = [];
+
         for (const pid of inspected) {
           try {
-            const resp = await fetch(`${API_BASE}/getProduce/${pid}`);
-            const data = await resp.json();
-            if (resp.ok && data.produce) items.push(data.produce);
+            const { produce } = await api.getProduceById(pid);
+            if (produce) items.push(produce);
           } catch (e) {
             // Ignore failure for single produce
           }
         }
         setProduces(items);
       } else {
-        const res = await fetch(`${API_BASE}/getProduceByOwner/${routeUserId}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Error fetching inventory");
-        setProduces(data.produces || []);
+        const { produces } = await api.getProduceByOwner(routeUserId);
+        setProduces(produces || []);
       }
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -93,7 +82,6 @@ export default function InventoryScreen({ navigation, route }) {
             ) : (
               produces.map((p) => <ProduceCard key={p.id} produce={p} />)
             )}
-
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={fetchInventory}

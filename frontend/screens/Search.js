@@ -15,20 +15,20 @@ import {
 } from "react-native-safe-area-context";
 import RNPickerSelect from "react-native-picker-select";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+
 import ScreenHeader from "../components/ScreenHeader";
 import Scanner from "../components/Scanner";
 import ProduceCard from "../components/ProduceCard";
 import DetailRow from "../components/DetailRow";
-import { API_BASE } from "../config";
+
+import { api } from "../services/api";
 import styles, { colors } from "../styles";
 
 export default function SearchScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-
   const [tab, setTab] = useState("Produce");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-
   const [produceId, setProduceId] = useState("");
   const [userRole, setUserRole] = useState("FARMER");
   const [userId, setUserId] = useState("");
@@ -42,18 +42,13 @@ export default function SearchScreen({ navigation }) {
     try {
       setLoading(true);
       setResult(null);
-
-      let url = "";
-      if (isProduceSearch) url = `${API_BASE}/getProduce/${produceId.trim()}`;
-      else {
+      let data;
+      if (isProduceSearch) {
+        data = await api.getProduceById(produceId.trim());
+      } else {
         const userKey = `${userRole}-${userId.trim()}`;
-        url = `${API_BASE}/getUser/${userKey}`;
+        data = await api.getUserDetails(userKey);
       }
-
-      const res = await fetch(url);
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || `Server returned ${res.status}`);
       setResult(data);
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -161,7 +156,6 @@ export default function SearchScreen({ navigation }) {
           hideSearchButton={true}
           showBack={true}
         />
-
         <View style={local.searchContainer}>
           <Text
             style={{
@@ -172,7 +166,6 @@ export default function SearchScreen({ navigation }) {
           >
             Search for information about any produce or user in the supply chain
           </Text>
-
           <View
             style={{ flexDirection: "row", justifyContent: "space-around" }}
           >
@@ -210,7 +203,6 @@ export default function SearchScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
-
           {tab === "Produce" ? (
             <Scanner value={produceId} onChange={setProduceId} />
           ) : (
@@ -244,7 +236,6 @@ export default function SearchScreen({ navigation }) {
               />
             </View>
           )}
-
           <TouchableOpacity
             style={[styles.primaryButton, { marginTop: 20 }]}
             onPress={fetchResult}
@@ -257,7 +248,6 @@ export default function SearchScreen({ navigation }) {
             )}
           </TouchableOpacity>
         </View>
-
         {loading && (
           <ActivityIndicator
             size="large"
@@ -265,7 +255,6 @@ export default function SearchScreen({ navigation }) {
             style={{ marginTop: 30 }}
           />
         )}
-
         {!loading && result && (
           <>
             {tab === "Produce" && result.produce ? (

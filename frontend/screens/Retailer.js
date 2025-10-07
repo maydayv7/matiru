@@ -8,11 +8,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import ScreenHeader from "../components/ScreenHeader";
 import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
-import { API_BASE } from "../config";
+import TransferOwnershipForm from "../components/TransferOwnershipForm";
+
+import { api } from "../services/api";
 import styles from "../styles";
 import { AuthContext } from "../AuthContext";
 
@@ -20,16 +23,12 @@ export default function RetailerScreen({ navigation, route }) {
   const { user } = useContext(AuthContext);
   const userId = route.params?.userId || user?.id;
   const token = user?.token;
-  const [active, setActive] = useState(null);
 
+  const [active, setActive] = useState(null);
   const [produceId, setProduceId] = useState("");
   const [location, setLocation] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [storageConditions, setStorageConditions] = useState("");
-
-  const [newOwnerId, setNewOwnerId] = useState("");
-  const [qty, setQty] = useState("");
-  const [salePrice, setSalePrice] = useState("");
 
   const resetCommon = () => {
     setProduceId("");
@@ -37,20 +36,14 @@ export default function RetailerScreen({ navigation, route }) {
 
   const updateLocation = async () => {
     try {
-      const res = await fetch(`${API_BASE}/updateLocation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.updateLocation(
+        {
           produceId,
           actorId: userId,
           newLocation: location,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
+        },
+        token
+      );
       Alert.alert("Location Updated", "Location updated successfully");
       resetCommon();
       setLocation("");
@@ -59,28 +52,30 @@ export default function RetailerScreen({ navigation, route }) {
     }
   };
 
-  const transferOwnership = async () => {
+  const transferOwnership = async ({
+    produceId,
+    newOwnerId,
+    qty,
+    salePrice,
+    onComplete,
+  }) => {
+    if (!produceId || !newOwnerId || !qty)
+      return Alert.alert(
+        "Error",
+        "Please provide Produce ID, New Owner ID, and Quantity."
+      );
     try {
-      const res = await fetch(`${API_BASE}/transferOwnership`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.transferOwnership(
+        {
           produceId,
           newOwnerId,
           qty: parseFloat(qty),
           salePrice: parseFloat(salePrice),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
+        },
+        token
+      );
       Alert.alert("Transferred", "Sale / Transfer successful");
-      resetCommon();
-      setNewOwnerId("");
-      setQty("");
-      setSalePrice("");
+      onComplete();
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -88,13 +83,8 @@ export default function RetailerScreen({ navigation, route }) {
 
   const updateDetails = async () => {
     try {
-      const res = await fetch(`${API_BASE}/updateDetails`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.updateDetails(
+        {
           produceId,
           actorId: userId,
           details: {
@@ -103,11 +93,10 @@ export default function RetailerScreen({ navigation, route }) {
               ? storageConditions.split(",").map((c) => c.trim())
               : [],
           },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Updated Details", "Produce details updated");
+        },
+        token
+      );
+      Alert.alert("Updated Details", "Produce details updated successfully");
       resetCommon();
       setPricePerUnit("");
       setStorageConditions("");
@@ -156,35 +145,7 @@ export default function RetailerScreen({ navigation, route }) {
         )}
 
         {active === "transfer" && (
-          <View>
-            <Scanner value={produceId} onChange={setProduceId} />
-            <TextInput
-              style={styles.input}
-              placeholder="New Owner ID"
-              value={newOwnerId}
-              onChangeText={setNewOwnerId}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Quantity"
-              keyboardType="numeric"
-              value={qty}
-              onChangeText={setQty}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Sale Price"
-              keyboardType="numeric"
-              value={salePrice}
-              onChangeText={setSalePrice}
-            />
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={transferOwnership}
-            >
-              <Text style={styles.buttonText}>Confirm Sale</Text>
-            </TouchableOpacity>
-          </View>
+          <TransferOwnershipForm onSubmit={transferOwnership} />
         )}
 
         {active === "update" && (

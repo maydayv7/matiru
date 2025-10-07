@@ -9,11 +9,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import ScreenHeader from "../components/ScreenHeader";
 import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
 import DatePicker from "../components/DatePicker";
-import { API_BASE } from "../config";
+
+import { api } from "../services/api";
 import styles, { colors } from "../styles";
 import { AuthContext } from "../AuthContext";
 
@@ -21,8 +23,8 @@ export default function InspectorScreen({ navigation, route }) {
   const { user } = useContext(AuthContext);
   const userId = route.params?.userId || user?.id;
   const token = user?.token;
-  const [active, setActive] = useState(null);
 
+  const [active, setActive] = useState(null);
   const [produceId, setProduceId] = useState("");
   const [quality, setQuality] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -38,10 +40,7 @@ export default function InspectorScreen({ navigation, route }) {
   };
 
   const inspectProduce = async () => {
-    if (!produceId) {
-      Alert.alert("Error", "Enter a Produce ID");
-      return;
-    }
+    if (!produceId) return Alert.alert("Error", "Enter a Produce ID");
 
     try {
       const body = {
@@ -55,17 +54,7 @@ export default function InspectorScreen({ navigation, route }) {
         },
       };
 
-      const res = await fetch(`${API_BASE}/inspectProduce`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
+      await api.inspectProduce(body, token);
 
       Alert.alert(
         markFailed ? "Marked as Failed" : "Inspection Recorded",
@@ -125,6 +114,7 @@ export default function InspectorScreen({ navigation, route }) {
                 thumbColor={markFailed ? colors.danger : colors.gray}
               />
             </View>
+
             {markFailed && (
               <TextInput
                 style={styles.input}
@@ -133,6 +123,7 @@ export default function InspectorScreen({ navigation, route }) {
                 onChangeText={setReason}
               />
             )}
+
             <TouchableOpacity
               style={[
                 styles.primaryButton,

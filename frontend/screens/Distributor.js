@@ -8,11 +8,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import ScreenHeader from "../components/ScreenHeader";
 import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
 import LocationPicker from "../components/LocationPicker";
-import { API_BASE } from "../config";
+import TransferOwnershipForm from "../components/TransferOwnershipForm";
+
+import { api } from "../services/api";
 import styles from "../styles";
 import { AuthContext } from "../AuthContext";
 
@@ -20,22 +23,12 @@ export default function DistributorScreen({ navigation, route }) {
   const { user } = useContext(AuthContext);
   const userId = route.params?.userId || user?.id;
   const token = user?.token;
-  const [active, setActive] = useState(null);
 
-  // Common
+  const [active, setActive] = useState(null);
   const [produceId, setProduceId] = useState("");
   const [location, setLocation] = useState("");
-
-  // transferOwnership
-  const [newOwnerId, setNewOwnerId] = useState("");
-  const [qty, setQty] = useState("");
-  const [salePrice, setSalePrice] = useState("");
-
-  // markAsUnavailable
   const [reason, setReason] = useState("");
   const [newStatus, setNewStatus] = useState("");
-
-  // updateStorageConditions
   const [storageConditions, setStorageConditions] = useState("");
 
   const resetCommon = () => {
@@ -44,20 +37,14 @@ export default function DistributorScreen({ navigation, route }) {
 
   const updateLocation = async () => {
     try {
-      const res = await fetch(`${API_BASE}/updateLocation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.updateLocation(
+        {
           produceId,
           actorId: userId,
           newLocation: location,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
+        },
+        token
+      );
       Alert.alert("Location Updated", "Location updated successfully");
       resetCommon();
       setLocation("");
@@ -66,29 +53,30 @@ export default function DistributorScreen({ navigation, route }) {
     }
   };
 
-  const transferOwnership = async () => {
+  const transferOwnership = async ({
+    produceId,
+    newOwnerId,
+    qty,
+    salePrice,
+    onComplete,
+  }) => {
+    if (!produceId || !newOwnerId || !qty)
+      return Alert.alert(
+        "Error",
+        "Please provide Produce ID, New Owner ID, and Quantity."
+      );
     try {
-      const res = await fetch(`${API_BASE}/transferOwnership`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.transferOwnership(
+        {
           produceId,
           newOwnerId,
           qty: parseFloat(qty),
           salePrice: parseFloat(salePrice),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
+        },
+        token
+      );
       Alert.alert("Transferred", "Ownership transferred successfully");
-      // reset fields
-      resetCommon();
-      setNewOwnerId("");
-      setQty("");
-      setSalePrice("");
+      onComplete();
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -96,17 +84,11 @@ export default function DistributorScreen({ navigation, route }) {
 
   const markAsUnavailable = async () => {
     try {
-      const res = await fetch(`${API_BASE}/markAsUnavailable`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ produceId, actorId: userId, reason, newStatus }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Marked Unavailable", "Produce marked unavailable");
+      await api.markAsUnavailable(
+        { produceId, actorId: userId, reason, newStatus },
+        token
+      );
+      Alert.alert("Marked Unavailable", "Produce marked as unavailable");
       resetCommon();
       setReason("");
       setNewStatus("");
@@ -117,13 +99,8 @@ export default function DistributorScreen({ navigation, route }) {
 
   const updateStorageConditions = async () => {
     try {
-      const res = await fetch(`${API_BASE}/updateDetails`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.updateDetails(
+        {
           produceId,
           actorId: userId,
           details: {
@@ -131,11 +108,10 @@ export default function DistributorScreen({ navigation, route }) {
               ? storageConditions.split(",").map((c) => c.trim())
               : [],
           },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-      Alert.alert("Updated Storage Conditions", "Storage conditions updated");
+        },
+        token
+      );
+      Alert.alert("Updated", "Storage conditions updated successfully");
       resetCommon();
       setStorageConditions("");
     } catch (err) {
@@ -169,7 +145,7 @@ export default function DistributorScreen({ navigation, route }) {
           />
           <ActionButton
             icon="thermometer"
-            text="Update Storage Conditions"
+            text="Update Storage"
             onPress={() => setActive("storage")}
           />
         </View>
@@ -188,35 +164,7 @@ export default function DistributorScreen({ navigation, route }) {
         )}
 
         {active === "transfer" && (
-          <View>
-            <Scanner value={produceId} onChange={setProduceId} />
-            <TextInput
-              style={styles.input}
-              placeholder="New Owner ID"
-              value={newOwnerId}
-              onChangeText={setNewOwnerId}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Quantity"
-              keyboardType="numeric"
-              value={qty}
-              onChangeText={setQty}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Sale Price"
-              keyboardType="numeric"
-              value={salePrice}
-              onChangeText={setSalePrice}
-            />
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={transferOwnership}
-            >
-              <Text style={styles.buttonText}>Transfer Ownership</Text>
-            </TouchableOpacity>
-          </View>
+          <TransferOwnershipForm onSubmit={transferOwnership} />
         )}
 
         {active === "remove" && (
@@ -230,7 +178,7 @@ export default function DistributorScreen({ navigation, route }) {
             />
             <TextInput
               style={styles.input}
-              placeholder="New Status (Removed/Missing...)"
+              placeholder="New Status (e.g., Removed, Missing)"
               value={newStatus}
               onChangeText={setNewStatus}
             />
@@ -248,7 +196,7 @@ export default function DistributorScreen({ navigation, route }) {
             <Scanner value={produceId} onChange={setProduceId} />
             <TextInput
               style={styles.input}
-              placeholder="Enter Storage Conditions (comma separated)"
+              placeholder="Storage Conditions (comma separated)"
               value={storageConditions}
               onChangeText={setStorageConditions}
             />

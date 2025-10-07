@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import ScreenHeader from "../components/ScreenHeader";
 import ActionButton from "../components/ActionButton";
 import Scanner from "../components/Scanner";
@@ -15,7 +16,9 @@ import LocationPicker from "../components/LocationPicker";
 import QRModal from "../components/QRModal";
 import ImageUploader from "../components/ImageUploader";
 import DatePicker from "../components/DatePicker";
-import { API_BASE } from "../config";
+import TransferOwnershipForm from "../components/TransferOwnershipForm";
+
+import { api } from "../services/api";
 import styles from "../styles";
 import { AuthContext } from "../AuthContext";
 
@@ -27,14 +30,12 @@ export default function FarmerScreen({ navigation, route }) {
   const [active, setActive] = useState(null);
   const imageUploaderRef = useRef(null);
 
-  // Common
   const [produceId, setProduceId] = useState("");
   const [location, setLocation] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [storageConditions, setStorageConditions] = useState("");
   const [certification, setCertification] = useState("");
 
-  // registerProduce
   const [cropType, setCropType] = useState("");
   const [qty, setQty] = useState("");
   const [qtyUnit, setQtyUnit] = useState("KG");
@@ -42,19 +43,11 @@ export default function FarmerScreen({ navigation, route }) {
   const [quality, setQuality] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
 
-  // splitProduce
   const [splitQty, setSplitQty] = useState("");
 
-  // transferOwnership
-  const [newOwnerId, setNewOwnerId] = useState("");
-  const [salePrice, setSalePrice] = useState("");
-  const [transferQty, setTransferQty] = useState("");
-
-  // QR Modal
   const [qrVisible, setQrVisible] = useState(false);
   const [lastProduceId, setLastProduceId] = useState(null);
 
-  // Reset
   const resetRegisterForm = () => {
     setCropType("");
     setQty("");
@@ -73,18 +66,11 @@ export default function FarmerScreen({ navigation, route }) {
     setProduceId("");
   };
 
-  // Functions
   const registerProduce = async () => {
     try {
       const imageUrl = await imageUploaderRef.current?.upload();
-
-      const res = await fetch(`${API_BASE}/registerProduce`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      const { produce } = await api.registerProduce(
+        {
           farmerId: userId,
           details: {
             imageUrl,
@@ -102,39 +88,23 @@ export default function FarmerScreen({ navigation, route }) {
               ? certification.split(",").map((c) => c.trim())
               : [],
             location,
-            farmerName: user?.username || "",
           },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-
-      const produced = data.produce;
-      setLastProduceId(produced.id);
+        },
+        token
+      );
+      setLastProduceId(produce.id);
       setQrVisible(true);
-
-      console.info("Registered", "Produce registered successfully");
       resetRegisterForm();
-      resetCommon();
     } catch (err) {
       Alert.alert("Error", err.message);
     }
   };
 
   const updateDetails = async () => {
-    if (!produceId) {
-      Alert.alert("Error", "Please enter Produce ID");
-      return;
-    }
-
+    if (!produceId) return Alert.alert("Error", "Please enter Produce ID");
     try {
-      const res = await fetch(`${API_BASE}/updateDetails`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.updateDetails(
+        {
           produceId,
           actorId: userId,
           details: {
@@ -146,42 +116,31 @@ export default function FarmerScreen({ navigation, route }) {
               ? certification.split(",").map((c) => c.trim())
               : undefined,
           },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-
-      Alert.alert("Updated", "Produce details updated");
+        },
+        token
+      );
+      Alert.alert("Updated", "Produce details updated successfully");
       resetCommon();
       setPricePerUnit("");
       setStorageConditions("");
+      setCertification("");
     } catch (err) {
       Alert.alert("Error", err.message);
     }
   };
 
   const splitProduce = async () => {
-    if (!produceId || !splitQty) {
-      Alert.alert("Error", "Please enter Produce ID quantity to split");
-      return;
-    }
-
+    if (!produceId || !splitQty)
+      return Alert.alert("Error", "Please enter Produce ID and quantity");
     try {
-      const res = await fetch(`${API_BASE}/splitProduce`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.splitProduce(
+        {
           produceId,
           qty: parseFloat(splitQty),
           ownerId: userId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-
+        },
+        token
+      );
       Alert.alert("Split", "Produce split successfully");
       setSplitQty("");
       resetCommon();
@@ -191,27 +150,17 @@ export default function FarmerScreen({ navigation, route }) {
   };
 
   const updateLocation = async () => {
-    if (!produceId || !location) {
-      Alert.alert("Error", "Please enter Produce ID and pick a location");
-      return;
-    }
-
+    if (!produceId || !location)
+      return Alert.alert("Error", "Please enter Produce ID and location");
     try {
-      const res = await fetch(`${API_BASE}/updateLocation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.updateLocation(
+        {
           produceId,
           actorId: userId,
           newLocation: location,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-
+        },
+        token
+      );
       Alert.alert("Moved", "Location updated successfully");
       resetCommon();
       setLocation("");
@@ -220,35 +169,30 @@ export default function FarmerScreen({ navigation, route }) {
     }
   };
 
-  const transferOwnership = async () => {
-    if (!produceId || !newOwnerId || !transferQty) {
-      Alert.alert(
+  const transferOwnership = async ({
+    produceId,
+    newOwnerId,
+    qty,
+    salePrice,
+    onComplete,
+  }) => {
+    if (!produceId || !newOwnerId || !qty)
+      return Alert.alert(
         "Error",
-        "Please enter Produce ID, New Owner ID and Quantity"
+        "Please provide Produce ID, New Owner ID, and Quantity."
       );
-      return;
-    }
     try {
-      const res = await fetch(`${API_BASE}/transferOwnership`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await api.transferOwnership(
+        {
           produceId,
           newOwnerId,
-          qty: parseFloat(transferQty),
+          qty: parseFloat(qty),
           salePrice: salePrice ? parseFloat(salePrice) : 0,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
+        },
+        token
+      );
       Alert.alert("Transferred", "Ownership transferred successfully");
-      resetCommon();
-      setNewOwnerId("");
-      setTransferQty("");
-      setSalePrice("");
+      onComplete();
     } catch (err) {
       Alert.alert("Error", err.message);
     }
@@ -421,35 +365,7 @@ export default function FarmerScreen({ navigation, route }) {
         )}
 
         {active === "transfer" && (
-          <View>
-            <Scanner value={produceId} onChange={setProduceId} />
-            <TextInput
-              style={styles.input}
-              placeholder="New Owner ID"
-              value={newOwnerId}
-              onChangeText={setNewOwnerId}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Quantity"
-              keyboardType="numeric"
-              value={transferQty}
-              onChangeText={setTransferQty}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Sale Price"
-              keyboardType="numeric"
-              value={salePrice}
-              onChangeText={setSalePrice}
-            />
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={transferOwnership}
-            >
-              <Text style={styles.buttonText}>Transfer Ownership</Text>
-            </TouchableOpacity>
-          </View>
+          <TransferOwnershipForm onSubmit={transferOwnership} />
         )}
       </ScrollView>
 

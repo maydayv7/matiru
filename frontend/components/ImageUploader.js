@@ -1,15 +1,15 @@
 import { useState, forwardRef, useImperativeHandle } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Button,
   Image,
-  View,
   Platform,
-  ActivityIndicator,
   Text,
-  Alert,
+  View,
 } from "react-native";
 import { launchImageLibraryAsync } from "expo-image-picker";
-import { API_BASE } from "../config";
+import { api } from "../services/api";
 import { colors } from "../styles";
 
 const ImageUploader = forwardRef(({ token }, ref) => {
@@ -20,7 +20,6 @@ const ImageUploader = forwardRef(({ token }, ref) => {
     upload: async () => {
       if (!imageAsset) return null;
       setIsUploading(true);
-
       try {
         const imageUrl = await handleUpload();
         return imageUrl;
@@ -31,7 +30,6 @@ const ImageUploader = forwardRef(({ token }, ref) => {
         setIsUploading(false);
       }
     },
-
     reset: () => {
       setImageAsset(null);
       setIsUploading(false);
@@ -44,13 +42,11 @@ const ImageUploader = forwardRef(({ token }, ref) => {
       quality: 0.7,
       mediaTypes: "Images",
     });
-
     if (!result.canceled) setImageAsset(result.assets[0]);
   };
 
   const handleUpload = async () => {
     const data = new FormData();
-
     if (Platform.OS === "web") {
       const response = await fetch(imageAsset.uri);
       const blob = await response.blob();
@@ -66,17 +62,7 @@ const ImageUploader = forwardRef(({ token }, ref) => {
           `image-${Date.now()}.jpg`,
       });
     }
-
-    const res = await fetch(`${API_BASE}/uploadImage`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: data,
-    });
-
-    const responseData = await res.json();
-    if (!res.ok) throw new Error(responseData.error || "Image upload failed");
+    const responseData = await api.uploadImage(data, token);
     return responseData.url;
   };
 

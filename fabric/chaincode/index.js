@@ -1,5 +1,4 @@
 "use strict";
-
 const { Contract } = require("fabric-contract-api");
 
 class ProduceContract extends Contract {
@@ -77,6 +76,29 @@ class ProduceContract extends Contract {
     }
   }
 
+  _validateInput(data, requiredFields) {
+    for (const field of requiredFields) {
+      if (
+        data[field] === undefined ||
+        data[field] === null ||
+        data[field] === ""
+      ) {
+        throw new Error(`Validation Error: Field '${field}' is required`);
+      }
+    }
+    if (data.qty && (typeof data.qty !== "number" || data.qty <= 0))
+      throw new Error("Validation Error: 'qty' must be a positive number");
+
+    if (
+      data.pricePerUnit &&
+      (typeof data.pricePerUnit !== "number" || data.pricePerUnit < 0)
+    ) {
+      throw new Error(
+        "Validation Error: 'pricePerUnit' must be a non-negative number"
+      );
+    }
+  }
+
   // Initialize ledger
   async initLedger(ctx) {
     console.info("Ledger initialized");
@@ -86,36 +108,43 @@ class ProduceContract extends Contract {
   // Produce Registration
   async registerProduce(ctx, farmerId, detailsStr) {
     const clientMspId = ctx.clientIdentity.getMSPID();
-    if (clientMspId !== "Org1MSP") {
+    if (clientMspId !== "Org1MSP")
       throw new Error(
         `Client from ${clientMspId} is not authorized to register produce. Only Org1MSP is allowed.`
       );
-    }
 
     const farmerKey = `FARMER-${farmerId}`;
     const farmerState = await ctx.stub.getState(farmerKey);
     if (!farmerState || farmerState.length === 0)
       throw new Error(`Farmer ${farmerId} is not registered`);
-    const farmer = JSON.parse(farmerState.toString());
 
+    const farmer = JSON.parse(farmerState.toString());
     const details = JSON.parse(detailsStr || "{}");
+
+    this._validateInput(details, [
+      "cropType",
+      "qty",
+      "qtyUnit",
+      "pricePerUnit",
+      "harvestDate",
+    ]);
+
     const txId = ctx.stub.getTxID();
     const now = this._txTimestampISO(ctx);
-
     const id = `PRODUCE-${txId}`;
     const produce = {
       id,
       parentId: null,
       children: [],
-      qty: details.qty || 0,
-      qtyUnit: details.qtyUnit || "KG",
-      pricePerUnit: details.pricePerUnit || 0,
-      totalPrice: (details.pricePerUnit || 0) * (details.qty || 0),
+      qty: details.qty,
+      qtyUnit: details.qtyUnit,
+      pricePerUnit: details.pricePerUnit,
+      totalPrice: details.pricePerUnit * details.qty,
       currentOwner: farmerId,
       currentLocation: details.location || "",
       actionHistory: [],
       saleHistory: [],
-      cropType: details.cropType || "",
+      cropType: details.cropType,
       harvestDate: details.harvestDate || now,
       quality: details.quality || null,
       expiryDate: details.expiryDate || null,
@@ -132,16 +161,18 @@ class ProduceContract extends Contract {
         note: details.note || "",
       })
     );
+
     await this._putState(ctx, id, produce);
 
     const farmerObj = farmer;
     farmerObj.registeredProduce = farmerObj.registeredProduce || [];
     if (!farmerObj.registeredProduce.includes(id))
       farmerObj.registeredProduce.push(id);
+
     farmerObj.ownedProduce = farmerObj.ownedProduce || [];
     if (!farmerObj.ownedProduce.includes(id)) farmerObj.ownedProduce.push(id);
-    await this._putState(ctx, farmerKey, farmerObj);
 
+    await this._putState(ctx, farmerKey, farmerObj);
     return produce;
   }
 
@@ -167,6 +198,7 @@ class ProduceContract extends Contract {
     produce.isAvailable = false;
     produce.notAvailableReason = reason || "";
     produce.status = newStatus || "Removed";
+
     produce.actionHistory.push(
       this._actionItem(ctx, "REMOVED", produce.currentLocation, actorId, {
         reason,
@@ -179,11 +211,10 @@ class ProduceContract extends Contract {
   // Produce Inspection
   async inspectProduce(ctx, produceId, inspectorId, qualityUpdateStr) {
     const clientMspId = ctx.clientIdentity.getMSPID();
-    if (clientMspId !== "Org4MSP") {
+    if (clientMspId !== "Org4MSP")
       throw new Error(
         `Client from ${clientMspId} is not authorized to inspect produce. Only Org4MSP is allowed.`
       );
-    }
 
     const qualityUpdate = JSON.parse(qualityUpdateStr || "{}");
     const produce = await this._getState(ctx, produceId);
@@ -228,7 +259,6 @@ class ProduceContract extends Contract {
         await this._putState(ctx, inspectorKey, inspectorObj);
       }
     }
-
     return produce;
   }
 
@@ -249,7 +279,6 @@ class ProduceContract extends Contract {
       produce.certification = details.certification;
 
     produce.totalPrice = (produce.pricePerUnit || 0) * (produce.qty || 0);
-
     produce.actionHistory.push(
       this._actionItem(
         ctx,
@@ -284,6 +313,7 @@ class ProduceContract extends Contract {
     child.qty = qty;
     child.totalPrice = (child.pricePerUnit || 0) * qty;
     child.actionHistory = [];
+    child.saleHistory = [];
     child.actionHistory.push(
       this._actionItem(ctx, "SPLIT", produce.currentLocation, ownerId, { qty })
     );
@@ -309,7 +339,6 @@ class ProduceContract extends Contract {
         childId
       );
     }
-
     return { parent: produce, child };
   }
 
@@ -362,7 +391,6 @@ class ProduceContract extends Contract {
           child.id
         );
       }
-
       const newOwnerRes = await this._getUserById(ctx, newOwnerId);
       if (newOwnerRes) {
         await this._addOwnedProduceToUser(
@@ -402,7 +430,6 @@ class ProduceContract extends Contract {
           produceId
         );
       }
-
       const newOwnerRes = await this._getUserById(ctx, newOwnerId);
       if (newOwnerRes) {
         await this._addOwnedProduceToUser(
@@ -413,7 +440,6 @@ class ProduceContract extends Contract {
         );
       }
     }
-
     return { newAssetId: resultAssetId };
   }
 
@@ -428,8 +454,8 @@ class ProduceContract extends Contract {
   ) {
     const produce = await this._getState(ctx, produceId);
     const now = this._txTimestampISO(ctx);
-
     produce.saleHistory = produce.saleHistory || [];
+
     if (produce.saleHistory.length === 0) {
       produce.saleHistory.push({
         timestamp: now,
@@ -464,7 +490,6 @@ class ProduceContract extends Contract {
         }
       )
     );
-
     await this._putState(ctx, produceId, produce);
     return produce;
   }
@@ -558,9 +583,11 @@ class ProduceContract extends Contract {
     const data = await ctx.stub.getState(userKey);
     if (!data || data.length === 0)
       throw new Error(`User ${userKey} not found`);
+
     const user = JSON.parse(data.toString());
     const details = JSON.parse(detailsStr || "{}");
     Object.assign(user, details);
+
     await this._putState(ctx, userKey, user);
     return user;
   }
