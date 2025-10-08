@@ -31,65 +31,48 @@ println "- VERBOSE: ${C_GREEN}${VERBOSE}${C_RESET}"
 
 FABRIC_CFG_PATH=$PWD/../config/
 
-#User has not provided a name
 if [ -z "$CC_NAME" ] || [ "$CC_NAME" = "NA" ]; then
-  fatalln "No chaincode name was provided. Valid call example: ./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go"
-
-# User has not provided a path
+  fatalln "No chaincode name was provided."
 elif [ -z "$CC_SRC_PATH" ] || [ "$CC_SRC_PATH" = "NA" ]; then
-  fatalln "No chaincode path was provided. Valid call example: ./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go"
-
-# User has not provided a language
+  fatalln "No chaincode path was provided."
 elif [ -z "$CC_SRC_LANGUAGE" ] || [ "$CC_SRC_LANGUAGE" = "NA" ]; then
-  fatalln "No chaincode language was provided. Valid call example: ./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go"
-
-## Make sure that the path to the chaincode exists
+  fatalln "No chaincode language was provided."
 elif [ ! -d "$CC_SRC_PATH" ]; then
-  fatalln "Path to chaincode does not exist. Please provide different path."
+  fatalln "Path to chaincode does not exist."
 fi
 
 CC_SRC_LANGUAGE=$(echo "$CC_SRC_LANGUAGE" | tr [:upper:] [:lower:])
 
-# do some language specific preparation to the chaincode before packaging
 if [ "$CC_SRC_LANGUAGE" = "go" ]; then
   CC_RUNTIME_LANGUAGE=golang
-
   infoln "Vendoring Go dependencies at $CC_SRC_PATH"
   pushd $CC_SRC_PATH
   GO111MODULE=on go mod vendor
   popd
   successln "Finished vendoring Go dependencies"
-
 elif [ "$CC_SRC_LANGUAGE" = "java" ]; then
   CC_RUNTIME_LANGUAGE=java
-
   infoln "Compiling Java code..."
   pushd $CC_SRC_PATH
   ./gradlew installDist
   popd
   successln "Finished compiling Java code"
   CC_SRC_PATH=$CC_SRC_PATH/build/install/$CC_NAME
-
 elif [ "$CC_SRC_LANGUAGE" = "javascript" ]; then
   CC_RUNTIME_LANGUAGE=node
-
 elif [ "$CC_SRC_LANGUAGE" = "typescript" ]; then
   CC_RUNTIME_LANGUAGE=node
-
   infoln "Compiling TypeScript code into JavaScript..."
   pushd $CC_SRC_PATH
   npm install
   npm run build
   popd
   successln "Finished compiling TypeScript code into JavaScript"
-
 else
-  fatalln "The chaincode language ${CC_SRC_LANGUAGE} is not supported by this script. Supported chaincode languages are: go, java, javascript, and typescript"
-  exit 1
+  fatalln "The chaincode language ${CC_SRC_LANGUAGE} is not supported by this script."
 fi
 
 INIT_REQUIRED="--init-required"
-# check if the init fcn should be called
 if [ "$CC_INIT_FCN" = "NA" ]; then
   INIT_REQUIRED=""
 fi
@@ -106,7 +89,6 @@ else
   CC_COLL_CONFIG="--collections-config $CC_COLL_CONFIG"
 fi
 
-# import utils
 . scripts/envVar.sh
 
 packageChaincode() {
@@ -119,7 +101,6 @@ packageChaincode() {
   successln "Chaincode is packaged"
 }
 
-# installChaincode PEER ORG
 installChaincode() {
   ORG=$1
   setGlobals $ORG
@@ -132,7 +113,6 @@ installChaincode() {
   successln "Chaincode is installed on peer0.org${ORG}"
 }
 
-# queryInstalled PEER ORG
 queryInstalled() {
   ORG=$1
   setGlobals $ORG
@@ -146,7 +126,6 @@ queryInstalled() {
   successln "Query installed successful on peer0.org${ORG} on channel"
 }
 
-# approveForMyOrg VERSION PEER ORG
 approveForMyOrg() {
   ORG=$1
   setGlobals $ORG
@@ -159,7 +138,6 @@ approveForMyOrg() {
   successln "Chaincode definition approved on peer0.org${ORG} on channel '$CHANNEL_NAME'"
 }
 
-# checkCommitReadiness VERSION PEER ORG
 checkCommitReadiness() {
   ORG=$1
   shift 1
@@ -167,8 +145,6 @@ checkCommitReadiness() {
   infoln "Checking the commit readiness of the chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
   local rc=1
   local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
     sleep $DELAY
     infoln "Attempting to check the commit readiness of the chaincode definition on peer0.org${ORG}, Retry after $DELAY seconds."
@@ -190,15 +166,10 @@ checkCommitReadiness() {
   fi
 }
 
-# commitChaincodeDefinition VERSION PEER ORG (PEER ORG)...
 commitChaincodeDefinition() {
   parsePeerConnectionParameters $@
   res=$?
   verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters "
-
-  # while 'peer chaincode' command can get the orderer endpoint from the
-  # peer (if join was successful), let's supply it directly as we know
-  # it using the "-o" option
   set -x
   peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
   res=$?
@@ -208,7 +179,6 @@ commitChaincodeDefinition() {
   successln "Chaincode definition committed on channel '$CHANNEL_NAME'"
 }
 
-# queryCommitted ORG
 queryCommitted() {
   ORG=$1
   setGlobals $ORG
@@ -216,8 +186,6 @@ queryCommitted() {
   infoln "Querying chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
   local rc=1
   local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
     sleep $DELAY
     infoln "Attempting to Query committed status on peer0.org${ORG}, Retry after $DELAY seconds."
@@ -241,10 +209,6 @@ chaincodeInvokeInit() {
   parsePeerConnectionParameters $@
   res=$?
   verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters "
-
-  # while 'peer chaincode' command can get the orderer endpoint from the
-  # peer (if join was successful), let's supply it directly as we know
-  # it using the "-o" option
   set -x
   fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
   infoln "invoke fcn call:${fcn_call}"
@@ -256,96 +220,36 @@ chaincodeInvokeInit() {
   successln "Invoke transaction successful on $PEERS on channel '$CHANNEL_NAME'"
 }
 
-chaincodeQuery() {
-  ORG=$1
-  setGlobals $ORG
-  infoln "Querying on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
-  local rc=1
-  local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
-  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    sleep $DELAY
-    infoln "Attempting to Query peer0.org${ORG}, Retry after $DELAY seconds."
-    set -x
-    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["queryAllCars"]}' >&log.txt
-    res=$?
-    { set +x; } 2>/dev/null
-    let rc=$res
-    COUNTER=$(expr $COUNTER + 1)
-  done
-  cat log.txt
-  if test $rc -eq 0; then
-    successln "Query successful on peer0.org${ORG} on channel '$CHANNEL_NAME'"
-  else
-    fatalln "After $MAX_RETRY attempts, Query result on peer0.org${ORG} is INVALID!"
-  fi
-}
-
-## package the chaincode
 packageChaincode
 
-## Install chaincode on peer0.org1 and peer0.org2
 infoln "Installing chaincode on peer0.org1..."
 installChaincode 1
 infoln "Installing chaincode on peer0.org2..."
 installChaincode 2
 infoln "Installing chaincode on peer0.org3..."
 installChaincode 3
-infoln "Installing chaincode on peer0.org2..."
+infoln "Installing chaincode on peer0.org4..."
 installChaincode 4
 
-## query whether the chaincode is installed
 queryInstalled 1
-
-## approve the definition for org1
 approveForMyOrg 1
-
-## check whether the chaincode definition is ready to be committed
-## expect org1 to have approved and org2 not to
 checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Org3MSP\": false" "\"Org4MSP\": false"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Org3MSP\": false" "\"Org4MSP\": false"
-checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Org3MSP\": false" "\"Org4MSP\": false"
-checkCommitReadiness 4 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Org3MSP\": false" "\"Org4MSP\": false"
 
-## now approve also for org2
 approveForMyOrg 2
-
-## check whether the chaincode definition is ready to be committed
-## expect them both to have approved
 checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": false" "\"Org4MSP\": false"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": false" "\"Org4MSP\": false"
-checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": false" "\"Org4MSP\": false"
-checkCommitReadiness 4 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": false" "\"Org4MSP\": false"
 
 approveForMyOrg 3
-
-## check whether the chaincode definition is ready to be committed
-## expect them both to have approved
 checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": false"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": false"
-checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": false"
-checkCommitReadiness 4 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": false"
 
 approveForMyOrg 4
-
-## check whether the chaincode definition is ready to be committed
-## expect them both to have approved
 checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": true"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": true"
-checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": true"
-checkCommitReadiness 4 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": true"
-## now that we know for sure all orgs have approved, commit the definition
-commitChaincodeDefinition 1 2 3 4
 
-## query on both orgs to see that the definition committed successfully
+commitChaincodeDefinition 1 2 3 4
 queryCommitted 1
 queryCommitted 2
 queryCommitted 3
 queryCommitted 4
 
-## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
-## method defined
 if [ "$CC_INIT_FCN" = "NA" ]; then
   infoln "Chaincode initialization is not required"
 else

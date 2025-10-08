@@ -24,11 +24,7 @@ npm install
 ```
 cd ../network
 ./network.sh up createChannel -ca -c CHANNEL_NAME
-cd addOrg3
-./addOrg3.sh up -c CHANNEL_NAME
-cd ../addOrg4
-./addOrg4.sh up -c CHANNEL_NAME
-cd ..
+./network.sh deployCC -c CHANNEL_NAME -ccn CHAINCODE_NAME -ccp /path/to/chaincode -ccl javascript
 ```
 
 After initial setup, you can use the following commands:
@@ -38,13 +34,7 @@ After initial setup, you can use the following commands:
 ./network.sh down # Reset everything -> Need to setup again
 ```
 
-5. Deploy Chaincode:
-
-```
-./network.sh deployCC -c CHANNEL_NAME -ccn CHAINCODE_NAME -ccp /path/to/chaincode -ccl javascript
-```
-
-6. Wallet Creation:
+5. Wallet Creation:
 
 ```
 DIR=../../backend/connections
@@ -61,7 +51,7 @@ node initWallet.js org3 ../fabric/network/organizations/peerOrganizations/org3.e
 node initWallet.js org4 ../fabric/network/organizations/peerOrganizations/org4.example.com/users/Admin@org4.example.com/msp ./wallet admin-org4
 ```
 
-7. The `.env` file must be created in `backend` like so:
+6. The `.env` file must be created in `backend` like so:
 
 ```
 # Backend server
@@ -89,7 +79,7 @@ CCP_PATH_ORG4="./connections/connection-org4.json"
 
 Make sure the port is not blocked by a firewall
 
-8. Start `backend`:
+7. Start `backend`:
 
 ```
 npm install

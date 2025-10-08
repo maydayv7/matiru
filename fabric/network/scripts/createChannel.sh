@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# imports  
 . scripts/envVar.sh
 . scripts/utils.sh
 
@@ -23,7 +22,7 @@ createChannelGenesisBlock() {
 		fatalln "configtxgen tool not found."
 	fi
 	set -x
-	configtxgen -profile TwoOrgsApplicationGenesis -outputBlock ./channel-artifacts/${CHANNEL_NAME}.block -channelID $CHANNEL_NAME
+	configtxgen -profile FourOrgsApplicationGenesis -outputBlock ./channel-artifacts/${CHANNEL_NAME}.block -channelID $CHANNEL_NAME
 	res=$?
 	{ set +x; } 2>/dev/null
   verifyResult $res "Failed to generate channel configuration transaction..."
@@ -31,7 +30,6 @@ createChannelGenesisBlock() {
 
 createChannel() {
 	setGlobals 1
-	# Poll in case the raft leader is not set yet
 	local rc=1
 	local COUNTER=1
 	while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ] ; do
@@ -47,14 +45,12 @@ createChannel() {
 	verifyResult $res "Channel creation failed"
 }
 
-# joinChannel ORG
 joinChannel() {
   FABRIC_CFG_PATH=$PWD/../config/
   ORG=$1
   setGlobals $ORG
 	local rc=1
 	local COUNTER=1
-	## Sometimes Join takes time, hence retry
 	while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ] ; do
     sleep $DELAY
     set -x
@@ -75,28 +71,32 @@ setAnchorPeer() {
 
 FABRIC_CFG_PATH=${PWD}/configtx
 
-## Create channel genesis block
 infoln "Generating channel genesis block '${CHANNEL_NAME}.block'"
 createChannelGenesisBlock
 
 FABRIC_CFG_PATH=$PWD/../config/
 BLOCKFILE="./channel-artifacts/${CHANNEL_NAME}.block"
 
-## Create channel
 infoln "Creating channel ${CHANNEL_NAME}"
 createChannel
 successln "Channel '$CHANNEL_NAME' created"
 
-## Join all the peers to the channel
 infoln "Joining org1 peer to the channel..."
 joinChannel 1
 infoln "Joining org2 peer to the channel..."
 joinChannel 2
+infoln "Joining org3 peer to the channel..."
+joinChannel 3
+infoln "Joining org4 peer to the channel..."
+joinChannel 4
 
-## Set the anchor peers for each org in the channel
 infoln "Setting anchor peer for org1..."
 setAnchorPeer 1
 infoln "Setting anchor peer for org2..."
 setAnchorPeer 2
+infoln "Setting anchor peer for org3..."
+setAnchorPeer 3
+infoln "Setting anchor peer for org4..."
+setAnchorPeer 4
 
 successln "Channel '$CHANNEL_NAME' joined"
