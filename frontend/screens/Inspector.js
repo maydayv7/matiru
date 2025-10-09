@@ -69,7 +69,7 @@ export default function InspectorScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Inspector Dashboard"
+        title="Inspect Produce"
         navigation={navigation}
         role="Inspector"
       />

@@ -3,8 +3,8 @@
 1. Install Docker & Docker Compose
 2. Install Fabric binaries and Docker images like so:
 
-```
-cd ..
+```sh
+cd fabric
 curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh
 chmod +x install-fabric.sh
 ./install-fabric.sh
@@ -14,29 +14,32 @@ Ensure the `config` directory is present inside `fabric`
 
 3. Install Chaincode dependencies:
 
-```
+```sh
 cd chaincode
 npm install
 ```
 
 4. Start Fabric network:
 
-```
+```sh
 cd ../network
 ./network.sh up createChannel -ca -c CHANNEL_NAME
 ./network.sh deployCC -c CHANNEL_NAME -ccn CHAINCODE_NAME -ccp /path/to/chaincode -ccl javascript
 ```
 
+> [!NOTE]
+> Internet connection is required for chaincode deployment
+
 After initial setup, you can use the following commands:
 
-```
+```sh
 ./network.sh up # Start network
 ./network.sh down # Reset everything -> Need to setup again
 ```
 
 5. Wallet Creation:
 
-```
+```sh
 DIR=../../backend/connections
 mkdir -p $DIR
 cp organizations/peerOrganizations/org1.example.com/connection-org1.json $DIR/connection-org1.json
@@ -53,7 +56,7 @@ node initWallet.js org4 ../fabric/network/organizations/peerOrganizations/org4.e
 
 6. The `.env` file must be created in `backend` like so:
 
-```
+```sh
 # Backend server
 PORT=4000
 
@@ -77,11 +80,12 @@ IDENTITY_ORG4="admin-org4"
 CCP_PATH_ORG4="./connections/connection-org4.json"
 ```
 
-Make sure the port is not blocked by a firewall
+> [!IMPORTANT]
+> Make sure the port is not blocked by a firewall
 
 7. Start `backend`:
 
-```
+```sh
 npm install
 npm run init
 npm start
@@ -91,14 +95,14 @@ npm start
 
 To start the `frontend` ->
 
-```
+```sh
 cd frontend
 npm install
 ```
 
 Then find your computer's IP address (using `ifconfig`) and execute the following:
 
-```
+```sh
 echo 'export const API_BASE = "http://IP_ADDRESS:4000/api";' >> config.js
 npm start
 ```

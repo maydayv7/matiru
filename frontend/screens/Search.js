@@ -96,7 +96,9 @@ export default function SearchScreen({ navigation }) {
               <Text style={{ fontWeight: "600", textTransform: "capitalize" }}>
                 {a.action.toLowerCase()}
               </Text>
-              <Text style={local.small}>By: {a.currentOwner}</Text>
+              <Text style={local.small}>
+                {a.action === "SALE" ? "To" : "By"}: {a.currentOwner}
+              </Text>
               <Text style={local.small}>
                 On: {new Date(a.timestamp).toLocaleString()}
               </Text>
