@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import ScreenHeader from "../components/ScreenHeader";
@@ -22,29 +23,52 @@ export default function NotificationsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
-    if (!user?.token) return;
-    try {
-      const data = await api.getNotifications(user.token);
-      const sorted = (data.notifications || []).sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-      );
-      setNotifications(sorted);
-    } catch (err) {
-      Alert.alert("Error", "Failed to fetch notifications.");
-    }
-  }, [user?.token]);
+  const CACHE_KEY = `@notifications_${user?.id}`;
+
+  const loadNotifications = useCallback(
+    async (isRefreshing = false) => {
+      if (!user?.token) return;
+      if (!isRefreshing) setLoading(true);
+
+      try {
+        const cachedData = await AsyncStorage.getItem(CACHE_KEY);
+        if (cachedData && !isRefreshing) {
+          const parsedData = JSON.parse(cachedData);
+          parsedData.sort(sortByLastAction);
+          setProduces(parsedData);
+        }
+      } catch (e) {
+        console.error("Failed to load cache:", e);
+      }
+
+      try {
+        const data = await api.getNotifications(user.token);
+        const sorted = (data.notifications || []).sort(
+          (a, b) => new Date(b.date) - new Date(a.date)
+        );
+        setNotifications(sorted);
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(sorted));
+      } catch (err) {
+        if (notifications.length === 0)
+          Alert.alert("Error", "Failed to fetch new notifications");
+        console.error("Network fetch failed:", err.message);
+      } finally {
+        if (!isRefreshing) setLoading(false);
+      }
+    },
+    [user?.token, notifications.length, CACHE_KEY]
+  );
 
   useEffect(() => {
     setLoading(true);
-    fetchNotifications().finally(() => setLoading(false));
-  }, [fetchNotifications]);
+    loadNotifications().finally(() => setLoading(false));
+  }, [loadNotifications]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchNotifications();
+    await loadNotifications(true);
     setRefreshing(false);
-  }, [fetchNotifications]);
+  }, [loadNotifications]);
 
   const getIconForTitle = (title) => {
     if (title.toLowerCase().includes("registered")) return "sprout";
@@ -84,7 +108,7 @@ export default function NotificationsScreen({ navigation }) {
         hideSearchButton={true}
         hideNotificationsButton={true}
       />
-      {loading ? (
+      {loading && notifications.length === 0 ? (
         <ActivityIndicator
           size="large"
           color={colors.darkGreen}
@@ -100,7 +124,12 @@ export default function NotificationsScreen({ navigation }) {
           }
           contentContainerStyle={{ paddingHorizontal: 16 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.darkGreen]}
+              tintColor={colors.darkGreen}
+            />
           }
         />
       )}

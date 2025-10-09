@@ -64,6 +64,7 @@ export default function DatePicker({ label, value, onChange }) {
           display={Platform.OS === "ios" ? "spinner" : "default"}
           onChange={handleChange}
           minimumDate={new Date()}
+          accentColor={colors.darkGreen}
         />
       )}
     </View>

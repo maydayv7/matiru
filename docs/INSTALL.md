@@ -1,3 +1,6 @@
+> [!WARNING]
+> The following instructions have been written for and tested exclusively on Linux
+
 ### A. Backend
 
 1. Install Docker & Docker Compose
@@ -10,7 +13,8 @@ chmod +x install-fabric.sh
 ./install-fabric.sh
 ```
 
-Ensure the `config` directory is present inside `fabric`
+> [!IMPORTANT]
+> Ensure the `config` directory is generated inside `fabric`
 
 3. Install Chaincode dependencies:
 
@@ -80,7 +84,7 @@ IDENTITY_ORG4="admin-org4"
 CCP_PATH_ORG4="./connections/connection-org4.json"
 ```
 
-> [!IMPORTANT]
+> [!NOTE]
 > Make sure the port is not blocked by a firewall
 
 7. Start `backend`:

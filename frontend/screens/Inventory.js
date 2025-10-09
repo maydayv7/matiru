@@ -79,11 +79,12 @@ export default function InventoryScreen({ navigation, route }) {
         await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fetchedProduces));
       } catch (err) {
         if (!produces.length) Alert.alert("Error", "Failed to fetch inventory");
+        console.error("Network fetch failed:", err.message);
       } finally {
         if (!isRefreshing) setLoading(false);
       }
     },
-    [role, routeUserId, produces.length]
+    [role, routeUserId, CACHE_KEY]
   );
 
   useEffect(() => {
@@ -109,7 +110,12 @@ export default function InventoryScreen({ navigation, route }) {
       <ScrollView
         contentContainerStyle={{ padding: 12 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.darkGreen]}
+            tintColor={colors.darkGreen}
+          />
         }
       >
         {loading && produces.length === 0 ? (
